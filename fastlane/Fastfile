@@ -25,7 +25,7 @@ PLAY_STORE_TRACK_PRODUCTION = "production"
 GLOTPRESS_APP_STRINGS_PROJECT_URL = 'https://translate.wordpress.com/projects/pocket-casts/android/'
 VERSION_PROPERTIES_PATH = File.join(PROJECT_ROOT_FOLDER, 'version.properties')
 
-# Instanstiate versioning classes
+# Instantiate versioning classes
 VERSION_CALCULATOR = Fastlane::Wpmreleasetoolkit::Versioning::SemanticVersionCalculator.new
 VERSION_FORMATTER = Fastlane::Wpmreleasetoolkit::Versioning::RCNotationVersionFormatter.new
 BUILD_CODE_CALCULATOR = Fastlane::Wpmreleasetoolkit::Versioning::SimpleBuildCodeCalculator.new
@@ -58,7 +58,6 @@ SUPPORTED_LOCALES = [
 Dotenv.load(USER_ENV_FILE_PATH)
 ENV["PROJECT_NAME"] = "pocket-casts-android"
 ENV["PROJECT_ROOT_FOLDER"] = "./"
-ENV['FL_RELEASE_TOOLKIT_DEFAULT_BRANCH'] = 'main'
 DEFAULT_BRANCH = 'main'
 ENV['SUPPLY_UPLOAD_MAX_RETRIES']='5'
 GH_REPOSITORY = "automattic/pocket-casts-android"
