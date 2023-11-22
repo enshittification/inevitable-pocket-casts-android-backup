@@ -52,6 +52,14 @@ enum class Feature(
         tier = FeatureTier.Free,
         hasFirebaseRemoteFlag = false,
         hasDevToggle = true
+    ),
+    SETTINGS_SYNC(
+        key = "settings_sync",
+        title = "Settings Sync",
+        defaultValue = BuildConfig.DEBUG,
+        tier = FeatureTier.Free,
+        hasFirebaseRemoteFlag = false,
+        hasDevToggle = true,
     );
 
     fun isCurrentlyExclusiveToPatron(
