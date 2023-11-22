@@ -7,7 +7,7 @@ enum class PodcastGridLayoutType(val id: Int, val analyticsValue: String) {
 
     companion object {
         val default = LARGE_ARTWORK
-        fun fromLayoutId(id: Int) =
+        fun fromId(id: Int) =
             PodcastGridLayoutType.values().find { it.id == id } ?: default
     }
 }

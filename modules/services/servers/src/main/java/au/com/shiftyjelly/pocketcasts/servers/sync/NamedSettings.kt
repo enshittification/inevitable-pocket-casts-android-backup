@@ -1,5 +1,8 @@
 package au.com.shiftyjelly.pocketcasts.servers.sync
 
+import au.com.shiftyjelly.pocketcasts.servers.BuildConfig
+import au.com.shiftyjelly.pocketcasts.utils.featureflag.Feature
+import au.com.shiftyjelly.pocketcasts.utils.featureflag.FeatureFlag
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -13,13 +16,44 @@ data class NamedSettingsSettings(
 )
 
 @JsonClass(generateAdapter = true)
+data class ChangedNamedSettings(
+    @field:Json(name = "grid_layout") val gridLayout: NamedChangedSettingInt? = null,
+)
+
+// @JsonClass(generateAdapter = true)
+// data class NamedChangedSetting<T>()
+
+@JsonClass(generateAdapter = true)
+data class NamedChangedSettingInt(
+    @field:Json(name = "value") val value: Int,
+    // FIXME: could I parse this directly to/from an Instant automatically?
+    @field:Json(name = "modified_at") val modifiedAt: String // not sure this is actually a string
+)
+
+@JsonClass(generateAdapter = true)
 data class NamedSettingsRequest(
     @field:Json(name = "m") val m: String = "Android",
     @field:Json(name = "v") val v: Int = 1,
     @field:Json(name = "settings") val settings: NamedSettingsSettings
 )
 
+@JsonClass(generateAdapter = true)
+data class ChangedNamedSettingsRequest(
+    @field:Json(name = "m") val m: String = "Android",
+    @field:Json(name = "v") val v: Int = 1,
+    @field:Json(name = "changed_settings") val changedSettings: ChangedNamedSettings?
+) {
+    init {
+        if (BuildConfig.DEBUG) {
+            require(FeatureFlag.isEnabled(Feature.SETTINGS_SYNC)) {
+                "This class should not be used unless sesttings sync is enabled"
+            }
+        }
+    }
+}
+
 typealias NamedSettingsResponse = Map<String, SettingResponse>
+typealias ChangedNamedSettingsResponse = Map<String, ChangedSettingResponse>
 
 @JsonClass(generateAdapter = true)
 data class SettingResponse(
@@ -27,6 +61,14 @@ data class SettingResponse(
     @field:Json(name = "changed") val changed: Boolean
 )
 
+@JsonClass(generateAdapter = true)
+data class ChangedSettingResponse(
+    @field:Json(name = "value") val value: Any,
+    @field:Json(name = "changed") val changed: Boolean,
+    @field:Json(name = "modifiedAt") val modifiedAt: String? = null,
+)
+
 interface NamedSettingsCaller {
     suspend fun namedSettings(request: NamedSettingsRequest): NamedSettingsResponse
+    suspend fun changedNamedSettings(request: ChangedNamedSettingsRequest): ChangedNamedSettingsResponse
 }

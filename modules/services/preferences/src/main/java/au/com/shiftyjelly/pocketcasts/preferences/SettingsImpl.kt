@@ -586,7 +586,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "PODCAST_GRID_LAYOUT",
         defaultValue = PodcastGridLayoutType.default,
         sharedPrefs = sharedPreferences,
-        fromInt = { PodcastGridLayoutType.fromLayoutId(it) },
+        fromInt = { PodcastGridLayoutType.fromId(it) },
         toInt = { it.id }
     )
 
