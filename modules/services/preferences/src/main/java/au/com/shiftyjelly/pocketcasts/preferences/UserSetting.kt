@@ -46,7 +46,17 @@ abstract class UserSetting<T>(
 
     protected abstract fun persist(value: T, commit: Boolean)
 
-    fun set(value: T, commit: Boolean = false, needsSync: Boolean = false) {
+    fun set(
+        value: T,
+        commit: Boolean = false,
+        // FIXME remove needsSync and just rely on modifiedAt or setModifiedTime
+        needsSync: Boolean = false,
+
+        // FIXME I need a way to either (a) not set a modified time, (b) set a specific modified time, or (c) set the current time
+        // sounds like I need a sealed class of some sort
+        setModifiedTime: Boolean = false,
+//        modifiedAt: String? = Instant.now().toString()
+    ) {
         persist(value, commit)
         _flow.value = value
 
@@ -54,7 +64,7 @@ abstract class UserSetting<T>(
         // a previous request to sync.
         if (needsSync) {
             this.needsSync = true
-            this.modifiedAt = Instant.now().toString()
+            this.modifiedAt = modifiedAt
         }
     }
 

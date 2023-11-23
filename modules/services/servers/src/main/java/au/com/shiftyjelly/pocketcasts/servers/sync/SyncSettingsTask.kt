@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import au.com.shiftyjelly.pocketcasts.helper.BuildConfig
 import au.com.shiftyjelly.pocketcasts.models.type.PodcastsSortType
 import au.com.shiftyjelly.pocketcasts.preferences.Settings
+import au.com.shiftyjelly.pocketcasts.preferences.UserSetting
 import au.com.shiftyjelly.pocketcasts.preferences.model.PodcastGridLayoutType
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.Feature
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.FeatureFlag
@@ -52,34 +53,62 @@ class SyncSettingsTask(val context: Context, val parameters: WorkerParameters) :
                 return
             }
 
-            val gridLayoutSetting = settings.podcastGridLayout
-
             val request = ChangedNamedSettingsRequest(
-                changedSettings = gridLayoutSetting.modifiedAt?.let { modifiedAt ->
-                    ChangedNamedSettings(
-                        gridLayout = NamedChangedSettingInt(
-                            value = gridLayoutSetting.value.id,
-                            modifiedAt = modifiedAt,
-                        )
-                    )
-                }
+                changedSettings = ChangedNamedSettings(
+                    gridLayout = settings.podcastGridLayout.toNamedChangedSetting()
+                        ?.mapValue { it.id },
+//                    gridLayout = settings.podcastGridLayout.let { setting ->
+//                        setting.modifiedAt?.let { modifiedAt ->
+//                            NamedChangedSetting(
+//                                value = setting.value.id,
+//                                modifiedAt = modifiedAt,
+//                            )
+//                       }
+//                    },
+                    marketingOptIn = settings.marketingOptIn.toNamedChangedSetting()
+//                    marketingOptIn = settings.marketingOptIn.let { setting ->
+//                         setting.modifiedAt?.let { modifiedAt ->
+//                             NamedChangedSetting(
+//                                 value = setting.value,
+//                                 modifiedAt = modifiedAt,
+//                             )
+//                         }
+//                    },
+                )
             )
             val response = namedSettingsCall.changedNamedSettings(request)
             for ((key, value) in response) {
                 when (key) {
+
+                    // FIXME extract out the duplication in setting the (maybe) updated value
+
                     "gridLayout" -> {
                         try {
                             val intValue = (value.value as Number).toInt()
                             val newSetting = PodcastGridLayoutType.fromId(intValue)
-                            Timber.e("TEST123, Setting gridLayout setting: $newSetting")
+                            Timber.e("TEST123, Setting gridLayout setting: $newSetting, modifiedAt: ${value.modifiedAt}")
                             settings.podcastGridLayout.set(
                                 value = newSetting,
                                 needsSync = false,
-//                                commit = false,
+//                                modifiedAt = value.modifiedAt,
                             )
                         } catch (e: ClassCastException) {
                             Timber.e(e, "TEST123, Invalid gridLayout value: ${value.value}")
                             LogBuffer.e(LogBuffer.TAG_INVALID_STATE, "Invalid gridLayout value: ${value.value}")
+                        }
+                    }
+                    "marketingOptIn" -> {
+                        try {
+                            val boolValue = value.value as Boolean
+                            Timber.e("TEST123, Setting marketingOptIn setting: $boolValue, modifiedAt: ${value.modifiedAt}")
+                            settings.marketingOptIn.set(
+                                value = boolValue,
+                                needsSync = false,
+//                                modifiedAt = value.modifiedAt,
+                            )
+                        } catch (e: ClassCastException) {
+                            Timber.e(e, "TEST123, Invalid marketingOptIn value: ${value.value}")
+                            LogBuffer.e(LogBuffer.TAG_INVALID_STATE, "Invalid marketingOptIn value: ${value.value}")
                         }
                     }
                 }
@@ -136,3 +165,12 @@ class SyncSettingsTask(val context: Context, val parameters: WorkerParameters) :
         return run(settings, namedSettingsCaller)
     }
 }
+
+private fun <T> UserSetting<T>.toNamedChangedSetting(): NamedChangedSetting<T>? =
+    // Only create an updated setting if the modifiedAt time is not null
+    modifiedAt?.let { modifiedAt ->
+        NamedChangedSetting(
+            value = value,
+            modifiedAt = modifiedAt,
+        )
+    }

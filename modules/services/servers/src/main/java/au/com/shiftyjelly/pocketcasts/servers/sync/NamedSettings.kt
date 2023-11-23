@@ -17,11 +17,23 @@ data class NamedSettingsSettings(
 
 @JsonClass(generateAdapter = true)
 data class ChangedNamedSettings(
-    @field:Json(name = "grid_layout") val gridLayout: NamedChangedSettingInt? = null,
+//    @field:Json(name = "grid_layout") val gridLayout: NamedChangedSettingInt? = null,
+    @field:Json(name = "gridLayout") val gridLayout: NamedChangedSetting<Int>? = null,
+    @field:Json(name = "marketingOptIn") val marketingOptIn: NamedChangedSetting<Boolean>? = null,
 )
 
-// @JsonClass(generateAdapter = true)
-// data class NamedChangedSetting<T>()
+@JsonClass(generateAdapter = true)
+data class NamedChangedSetting<T>(
+    @field:Json(name = "value") val value: T,
+    // FIXME: could I parse this directly to/from an Instant automatically?
+    @field:Json(name = "modified_at") val modifiedAt: String?
+) {
+    fun <R> mapValue(transform: (T) -> (R)): NamedChangedSetting<R> =
+        NamedChangedSetting(
+            value = transform(value),
+            modifiedAt = modifiedAt,
+        )
+}
 
 @JsonClass(generateAdapter = true)
 data class NamedChangedSettingInt(
