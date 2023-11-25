@@ -9,7 +9,12 @@ import java.time.Instant
 abstract class UserSetting<T>(
     protected val sharedPrefKey: String,
     protected val sharedPrefs: SharedPreferences,
+    userSettingManager: UserSettingManager,
 ) {
+
+    init {
+        userSettingManager.addUserSetting(this)
+    }
 
     private val needsSyncKey = "${sharedPrefKey}NeedsSync"
 
@@ -46,25 +51,23 @@ abstract class UserSetting<T>(
 
     protected abstract fun persist(value: T, commit: Boolean)
 
+    /**
+     * The modifiedAt parameter is used by the backend to resolve conflicts when syncing settings
+     * by allowing the most recent update to control.
+     */
     fun set(
         value: T,
         commit: Boolean = false,
         // FIXME remove needsSync and just rely on modifiedAt or setModifiedTime
-        needsSync: Boolean = false,
-
-        // FIXME I need a way to either (a) not set a modified time, (b) set a specific modified time, or (c) set the current time
-        // sounds like I need a sealed class of some sort
-        setModifiedTime: Boolean = false,
-//        modifiedAt: String? = Instant.now().toString()
+        needsSync: Boolean = false, // This can be removed once the Feature.SETTINGS_SYNC feature flag is removed
     ) {
         persist(value, commit)
         _flow.value = value
 
-        // Since this parameter is defaulted to false, let's not let the default overwrite
-        // a previous request to sync.
+        // If needsSync is false, we shouldn't overwrite previous values that need to be synced.
         if (needsSync) {
             this.needsSync = true
-            this.modifiedAt = modifiedAt
+            this.modifiedAt = Instant.now().toString()
         }
     }
 
@@ -72,9 +75,11 @@ abstract class UserSetting<T>(
         sharedPrefKey: String,
         private val defaultValue: Boolean,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
     ) : UserSetting<Boolean>(
         sharedPrefKey = sharedPrefKey,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
     ) {
 
         @SuppressLint("ApplySharedPref")
@@ -96,10 +101,12 @@ abstract class UserSetting<T>(
         sharedPrefKey: String,
         defaultValue: Int,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
     ) : PrefFromInt<Int>(
         sharedPrefKey = sharedPrefKey,
         defaultValue = defaultValue,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
         fromInt = { it },
         toInt = { it }
     )
@@ -108,10 +115,12 @@ abstract class UserSetting<T>(
         sharedPrefKey: String,
         defaultValue: String,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
     ) : PrefFromString<String>(
         sharedPrefKey = sharedPrefKey,
         defaultValue = defaultValue,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
         fromString = { it },
         toString = { it },
     )
@@ -121,11 +130,13 @@ abstract class UserSetting<T>(
         sharedPrefKey: String,
         private val defaultValue: T,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
         private val fromInt: (Int) -> T,
         private val toInt: (T) -> Int,
     ) : UserSetting<T>(
         sharedPrefKey = sharedPrefKey,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
     ) {
         override fun get(): T {
             val persistedInt = sharedPrefs.getInt(sharedPrefKey, toInt(defaultValue))
@@ -151,11 +162,13 @@ abstract class UserSetting<T>(
         sharedPrefKey: String,
         private val defaultValue: T,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
         private val fromFloat: (Float) -> T,
         private val toFloat: (T) -> Float,
     ) : UserSetting<T>(
         sharedPrefKey = sharedPrefKey,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
     ) {
         override fun get(): T {
             val persistedInt = sharedPrefs.getFloat(sharedPrefKey, toFloat(defaultValue))
@@ -181,11 +194,13 @@ abstract class UserSetting<T>(
         sharedPrefKey: String,
         defaultValue: T,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
         private val fromString: (String) -> T,
         private val toString: (T) -> String,
     ) : UserSetting<T>(
         sharedPrefKey = sharedPrefKey,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
     ) {
         private val defaultString = this.toString(defaultValue)
 
@@ -211,12 +226,14 @@ abstract class UserSetting<T>(
     class PrefListFromString<T>(
         sharedPrefKey: String,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
         private val defaultValue: List<T>,
         private val fromString: (String) -> T?,
         private val toString: (T) -> String,
     ) : UserSetting<List<T>>(
         sharedPrefKey = sharedPrefKey,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
     ) {
 
         override fun get(): List<T> {
@@ -251,10 +268,12 @@ abstract class UserSetting<T>(
         sharedPrefKey: String,
         defaultValue: Int,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
     ) : PrefFromString<Int>(
         sharedPrefKey = sharedPrefKey,
         defaultValue = defaultValue,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
         fromString = { value ->
             try {
                 val valueInt = Integer.parseInt(value)
@@ -274,9 +293,11 @@ abstract class UserSetting<T>(
     class Mock<T>(
         private val initialValue: T,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
     ) : UserSetting<T>(
         sharedPrefKey = "a_shared_pref_key",
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
     ) {
         override fun get(): T = initialValue
         override fun persist(value: T, commit: Boolean) {}

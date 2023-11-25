@@ -2,6 +2,7 @@ package au.com.shiftyjelly.pocketcasts.preferences.model
 
 import android.content.SharedPreferences
 import au.com.shiftyjelly.pocketcasts.preferences.UserSetting
+import au.com.shiftyjelly.pocketcasts.preferences.UserSettingManager
 
 enum class ThemeSetting(val id: String) {
     LIGHT("light"),
@@ -19,10 +20,12 @@ enum class ThemeSetting(val id: String) {
         sharedPrefKey: String,
         defaultValue: ThemeSetting,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
     ) : UserSetting.PrefFromString<ThemeSetting>(
         sharedPrefKey = sharedPrefKey,
         defaultValue = defaultValue,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
         fromString = { str ->
             ThemeSetting.values().find { it.id == str }
                 ?: defaultValue

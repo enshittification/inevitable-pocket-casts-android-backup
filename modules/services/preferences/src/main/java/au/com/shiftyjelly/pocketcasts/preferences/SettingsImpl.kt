@@ -62,7 +62,8 @@ class SettingsImpl @Inject constructor(
     @PrivateSharedPreferences private val privatePreferences: SharedPreferences,
     @ApplicationContext private val context: Context,
     private val firebaseRemoteConfig: FirebaseRemoteConfig,
-    private val moshi: Moshi
+    private val moshi: Moshi,
+    private val userSettingManager: UserSettingManager,
 ) : Settings {
 
     companion object {
@@ -119,24 +120,28 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = Settings.PREFERENCE_SKIP_BACKWARD,
         defaultValue = 10,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val skipForwardInSecs = UserSetting.SkipAmountPref(
         sharedPrefKey = Settings.PREFERENCE_SKIP_FORWARD,
         defaultValue = 30,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val marketingOptIn = UserSetting.BoolPref(
         sharedPrefKey = "marketingOptIn",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val freeGiftAcknowledged = UserSetting.BoolPref(
         sharedPrefKey = "freeGiftAck",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override fun getCancelledAcknowledged(): Boolean {
@@ -169,6 +174,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "backgroundRefresh",
         defaultValue = !Util.isWearOs(context),
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val podcastsSortType = UserSetting.PrefFromString(
@@ -177,6 +183,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefs = sharedPreferences,
         fromString = { PodcastsSortType.fromClientIdString(it) },
         toString = { it.clientId.toString() },
+        userSettingManager = userSettingManager,
     )
 
     override fun setSelectPodcastsSortType(sortType: PodcastsSortType) {
@@ -199,6 +206,7 @@ class SettingsImpl @Inject constructor(
             sharedPrefKey = "notificationVibrate",
             defaultValue = NotificationVibrateSetting.DEFAULT,
             sharedPrefs = sharedPreferences,
+            userSettingManager = userSettingManager,
             fromString = {
                 try {
                     val intValue = Integer.parseInt(it)
@@ -211,7 +219,7 @@ class SettingsImpl @Inject constructor(
                     null
                 } ?: NotificationVibrateSetting.DEFAULT
             },
-            toString = { it.intValue.toString() }
+            toString = { it.intValue.toString() },
         )
     }
 
@@ -219,6 +227,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "notificationRingtone",
         defaultValue = NotificationSound(context = context),
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromString = { NotificationSound(it, context) },
         toString = { it.path }
     )
@@ -227,6 +236,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "episodeNotificationsOn",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override fun usingCustomFolderStorage(): Boolean {
@@ -324,24 +334,28 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "discovery_country_code",
         defaultValue = getDefaultCountryCode(),
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val warnOnMeteredNetwork = UserSetting.BoolPref(
         sharedPrefKey = Settings.PREFERENCE_WARN_WHEN_NOT_ON_WIFI,
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val autoSubscribeToPlayed = UserSetting.BoolPref(
         sharedPrefKey = "autoSubscribeToPlayed",
         defaultValue = Util.isAutomotive(context),
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val autoShowPlayed = UserSetting.BoolPref(
         sharedPrefKey = "autoShowPlayed",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val playOverNotification = UserSetting.PrefFromString<PlayOverNotificationSetting>(
@@ -353,8 +367,9 @@ class SettingsImpl @Inject constructor(
             PlayOverNotificationSetting.NEVER
         },
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromString = { PlayOverNotificationSetting.fromPreferenceString(it) },
-        toString = { it.preferenceInt.toString() }
+        toString = { it.preferenceInt.toString() },
     )
 
     override fun setLastModified(lastModified: String?) {
@@ -478,54 +493,63 @@ class SettingsImpl @Inject constructor(
     override val hideNotificationOnPause = UserSetting.BoolPref(
         sharedPrefKey = "hideNotificationOnPause",
         defaultValue = false,
-        sharedPrefs = sharedPreferences
+        sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val streamingMode: UserSetting<Boolean> = UserSetting.BoolPref(
         sharedPrefKey = Settings.PREFERENCE_GLOBAL_STREAMING_MODE,
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val keepScreenAwake = UserSetting.BoolPref(
         sharedPrefKey = "keepScreenAwake4", // Yes, there is a 4 at the end. I don't know why.
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val openPlayerAutomatically = UserSetting.BoolPref(
         sharedPrefKey = "openPlayerAutomatically",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val autoDownloadUnmeteredOnly = UserSetting.BoolPref(
         sharedPrefKey = "autoDownloadOnlyDownloadOnWifi",
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val autoDownloadUpNext = UserSetting.BoolPref(
         sharedPrefKey = "autoDownloadUpNext",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val autoDownloadOnlyWhenCharging = UserSetting.BoolPref(
         sharedPrefKey = "autoDownloadOnlyDownloadWhenCharging",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val useEmbeddedArtwork = UserSetting.BoolPref(
         sharedPrefKey = "useEmbeddedArtwork",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val globalPlaybackEffects = object : UserSetting<PlaybackEffects>(
         sharedPrefKey = "globalPlaybackEffects",
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     ) {
         override fun get(): PlaybackEffects = PlaybackEffects().apply {
             playbackSpeed = globalPlaybackSpeed.value
@@ -544,6 +568,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "globalPlaybackSpeed",
         defaultValue = 1.0,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromFloat = { it.toDouble() },
         toFloat = { it.toFloat() },
     )
@@ -555,6 +580,7 @@ class SettingsImpl @Inject constructor(
             sharedPrefKey = "globalTrimMode",
             defaultValue = default,
             sharedPrefs = sharedPreferences,
+            userSettingManager = userSettingManager,
             fromInt = { TrimMode.values().getOrNull(it) ?: default },
             toInt = { it.ordinal },
         )
@@ -564,6 +590,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "globalAudioEffectVolumeBoost",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override fun getMigratedVersionCode(): Int {
@@ -578,6 +605,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "PODCAST_BADGE_TYPE",
         defaultValue = BadgeType.defaultValue,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromInt = { BadgeType.fromPersistedInt(it) },
         toInt = { it.persistedInt }
     )
@@ -586,6 +614,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "PODCAST_GRID_LAYOUT",
         defaultValue = PodcastGridLayoutType.default,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromInt = { PodcastGridLayoutType.fromId(it) },
         toInt = { it.id }
     )
@@ -650,6 +679,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "showArtworkOnLockScreen",
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override fun selectedFilter(): String? {
@@ -713,6 +743,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = Settings.INTELLIGENT_PLAYBACK_RESUMPTION,
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     private fun setDate(preference: String, date: Date?) {
@@ -782,6 +813,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "notification_actions",
         defaultValue = NewEpisodeNotificationActionSetting.Default,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromString = {
             when (it) {
                 NewEpisodeNotificationActionSetting.Default.stringValue -> NewEpisodeNotificationActionSetting.Default
@@ -804,12 +836,14 @@ class SettingsImpl @Inject constructor(
             AppPlatform.WearOs -> false
         },
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val autoArchiveIncludeStarred = UserSetting.BoolPref(
         sharedPrefKey = Settings.AUTO_ARCHIVE_INCLUDE_STARRED,
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val autoArchiveAfterPlaying = UserSetting.PrefFromInt(
@@ -819,6 +853,7 @@ class SettingsImpl @Inject constructor(
             AutoArchiveAfterPlayingSetting.fromString(it, context)
         } ?: AutoArchiveAfterPlayingSetting.defaultValue(context),
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromInt = { AutoArchiveAfterPlayingSetting.fromIndex(it) },
         toInt = { it.toIndex() },
     )
@@ -830,6 +865,7 @@ class SettingsImpl @Inject constructor(
             AutoArchiveInactiveSetting.fromString(it, context)
         } ?: AutoArchiveInactiveSetting.default,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromInt = { AutoArchiveInactiveSetting.fromIndex(it) },
         toInt = { it.toIndex() },
     )
@@ -859,6 +895,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "up_next_action",
         defaultValue = Settings.UpNextAction.PLAY_NEXT,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromInt = { Settings.UpNextAction.values()[it] },
         toInt = { it.ordinal }
     )
@@ -867,12 +904,14 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "tap_on_up_next_should_play",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val cachedSubscriptionStatus = UserSetting.PrefFromString<SubscriptionStatus?>(
         sharedPrefKey = "accountstatus",
         defaultValue = null,
         sharedPrefs = privatePreferences,
+        userSettingManager = userSettingManager,
         fromString = {
             if (it.isEmpty()) {
                 return@PrefFromString null
@@ -902,6 +941,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "headphone_controls_next_action",
         defaultAction = HeadphoneAction.SKIP_FORWARD,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         subscriptionStatusFlow = cachedSubscriptionStatus.flow,
     )
 
@@ -909,6 +949,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "headphone_controls_previous_action",
         defaultAction = HeadphoneAction.SKIP_BACK,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         subscriptionStatusFlow = cachedSubscriptionStatus.flow,
     )
 
@@ -916,17 +957,20 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "headphone_controls_play_bookmark_confirmation_sound",
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val showArchivedDefault = UserSetting.BoolPref(
         sharedPrefKey = "default_show_archived",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val mediaControlItems = UserSetting.PrefListFromString<MediaNotificationControls>(
         sharedPrefKey = "media_notification_controls_action",
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         defaultValue = MediaNotificationControls.All,
         fromString = { MediaNotificationControls.itemForId(it) },
         toString = { it.key }
@@ -938,6 +982,7 @@ class SettingsImpl @Inject constructor(
             sharedPrefKey = "default_podcast_grouping",
             defaultValue = default,
             sharedPrefs = sharedPreferences,
+            userSettingManager = userSettingManager,
             fromInt = { PodcastGrouping.All.getOrNull(it) ?: default },
             toInt = { PodcastGrouping.All.indexOf(it) }
         )
@@ -955,6 +1000,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "cloudUpNext",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val deleteLocalFileAfterPlaying = UserSetting.BoolPref(
@@ -963,6 +1009,7 @@ class SettingsImpl @Inject constructor(
         // Use value stored under previous key if it exists
         getBoolean("cloudDeleteAfterPlaying", false),
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val deleteCloudFileAfterPlaying = UserSetting.BoolPref(
@@ -971,6 +1018,7 @@ class SettingsImpl @Inject constructor(
         // Use value stored under previous key if it exists
         sharedPreferences.getBoolean("cloudDeleteCloudAfterPlaying", false),
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
 
     )
 
@@ -978,18 +1026,21 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "cloudAutoUpload",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val cloudAutoDownload = UserSetting.BoolPref(
         sharedPrefKey = "cloudAutoDownload",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val cloudDownloadOnlyOnWifi = UserSetting.BoolPref(
         sharedPrefKey = "cloudOnlyWifi",
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override fun getUpgradeClosedProfile(): Boolean {
@@ -1070,6 +1121,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "auto_add_up_next_limit",
         defaultValue = DEFAULT_MAX_AUTO_ADD_LIMIT,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val autoAddUpNextLimitBehaviour = run {
@@ -1078,6 +1130,7 @@ class SettingsImpl @Inject constructor(
             sharedPrefKey = "auto_add_up_next_limit_reached",
             defaultValue = default,
             sharedPrefs = sharedPreferences,
+            userSettingManager = userSettingManager,
             fromInt = {
                 AutoAddUpNextLimitBehaviour.values().getOrNull(it)
                     ?: default
@@ -1141,18 +1194,21 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "SendUsageStatsKey",
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val sendCrashReports = UserSetting.BoolPref(
         sharedPrefKey = "SendCrashReportsKey",
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val linkCrashReportsToUser = UserSetting.BoolPref(
         sharedPrefKey = "LinkCrashReportsToUserKey",
         defaultValue = false,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override fun setEndOfYearShowBadge2023(value: Boolean) {
@@ -1179,6 +1235,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "CustomMediaActionsVisibleKey",
         defaultValue = true,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override fun isNotificationsDisabledMessageShown() =
@@ -1208,6 +1265,9 @@ class SettingsImpl @Inject constructor(
 
     override fun setFullySignedOut(boolean: Boolean) {
         setBoolean(PROCESSED_SIGNOUT_KEY, boolean)
+        if (boolean) {
+            userSettingManager.onSignOut()
+        }
     }
 
     override fun getFullySignedOut(): Boolean =
@@ -1217,6 +1277,7 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "LastSelectedPodcastOrFilterUuid",
         defaultValue = LastPlayedList.default,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromString = {
             if (it.isEmpty()) {
                 LastPlayedList.default
@@ -1236,30 +1297,35 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = "pocketCastsTheme",
         defaultValue = ThemeSetting.DARK,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val darkThemePreference = ThemeSetting.UserSettingPref(
         sharedPrefKey = "PreferredDarkTheme",
         defaultValue = ThemeSetting.DARK,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val lightThemePreference = ThemeSetting.UserSettingPref(
         sharedPrefKey = "PreferredLightTheme",
         defaultValue = ThemeSetting.LIGHT,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val useSystemTheme = UserSetting.BoolPref(
         sharedPrefKey = "useSystemTheme",
         defaultValue = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q, // Only default on Android 10+
-        sharedPrefs = sharedPreferences
+        sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val appIcon = UserSetting.PrefFromString(
         sharedPrefKey = "pocketCastsAppIcon",
         defaultValue = AppIconSetting.DEFAULT,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
         fromString = { str ->
             AppIconSetting.values().find { it.id == str }
                 ?: AppIconSetting.DEFAULT
@@ -1271,18 +1337,21 @@ class SettingsImpl @Inject constructor(
         sharedPrefKey = Settings.PREFERENCE_BOOKMARKS_SORT_TYPE_FOR_EPISODE,
         defaultValue = BookmarksSortTypeDefault.DATE_ADDED_NEWEST_TO_OLDEST,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val playerBookmarksSortType = BookmarksSortTypeDefault.UserSettingPref(
         sharedPrefKey = Settings.PREFERENCE_BOOKMARKS_SORT_TYPE_FOR_PLAYER,
         defaultValue = BookmarksSortTypeDefault.DATE_ADDED_NEWEST_TO_OLDEST,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override val podcastBookmarksSortType = BookmarksSortTypeForPodcast.UserSettingPref(
         sharedPrefKey = Settings.PREFERENCE_BOOKMARKS_SORT_TYPE_FOR_PODCAST,
         defaultValue = BookmarksSortTypeForPodcast.DATE_ADDED_NEWEST_TO_OLDEST,
         sharedPrefs = sharedPreferences,
+        userSettingManager = userSettingManager,
     )
 
     override fun addReviewRequestedDate() {

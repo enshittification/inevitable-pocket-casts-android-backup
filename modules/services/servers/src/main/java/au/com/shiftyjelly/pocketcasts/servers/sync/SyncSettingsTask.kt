@@ -57,61 +57,36 @@ class SyncSettingsTask(val context: Context, val parameters: WorkerParameters) :
                 changedSettings = ChangedNamedSettings(
                     gridLayout = settings.podcastGridLayout.toNamedChangedSetting()
                         ?.mapValue { it.id },
-//                    gridLayout = settings.podcastGridLayout.let { setting ->
-//                        setting.modifiedAt?.let { modifiedAt ->
-//                            NamedChangedSetting(
-//                                value = setting.value.id,
-//                                modifiedAt = modifiedAt,
-//                            )
-//                       }
-//                    },
                     marketingOptIn = settings.marketingOptIn.toNamedChangedSetting()
-//                    marketingOptIn = settings.marketingOptIn.let { setting ->
-//                         setting.modifiedAt?.let { modifiedAt ->
-//                             NamedChangedSetting(
-//                                 value = setting.value,
-//                                 modifiedAt = modifiedAt,
-//                             )
-//                         }
-//                    },
                 )
             )
             val response = namedSettingsCall.changedNamedSettings(request)
             for ((key, value) in response) {
                 when (key) {
-
-                    // FIXME extract out the duplication in setting the (maybe) updated value
-
-                    "gridLayout" -> {
-                        try {
-                            val intValue = (value.value as Number).toInt()
-                            val newSetting = PodcastGridLayoutType.fromId(intValue)
-                            Timber.e("TEST123, Setting gridLayout setting: $newSetting, modifiedAt: ${value.modifiedAt}")
-                            settings.podcastGridLayout.set(
-                                value = newSetting,
-                                needsSync = false,
-//                                modifiedAt = value.modifiedAt,
-                            )
-                        } catch (e: ClassCastException) {
-                            Timber.e(e, "TEST123, Invalid gridLayout value: ${value.value}")
-                            LogBuffer.e(LogBuffer.TAG_INVALID_STATE, "Invalid gridLayout value: ${value.value}")
-                        }
+                    "gridLayout" -> saveSettingFromResponse(key, value, settings.podcastGridLayout) {
+                        val intValue = (value.value as Number).toInt()
+                        PodcastGridLayoutType.fromId(intValue)
                     }
-                    "marketingOptIn" -> {
-                        try {
-                            val boolValue = value.value as Boolean
-                            Timber.e("TEST123, Setting marketingOptIn setting: $boolValue, modifiedAt: ${value.modifiedAt}")
-                            settings.marketingOptIn.set(
-                                value = boolValue,
-                                needsSync = false,
-//                                modifiedAt = value.modifiedAt,
-                            )
-                        } catch (e: ClassCastException) {
-                            Timber.e(e, "TEST123, Invalid marketingOptIn value: ${value.value}")
-                            LogBuffer.e(LogBuffer.TAG_INVALID_STATE, "Invalid marketingOptIn value: ${value.value}")
-                        }
+                    "marketingOptIn" -> saveSettingFromResponse(key, value, settings.marketingOptIn) {
+                        it.value as Boolean
                     }
                 }
+            }
+        }
+
+        private fun <T> saveSettingFromResponse(
+            nameForLogs: String,
+            changedSettingResponse: ChangedSettingResponse,
+            userSetting: UserSetting<T>,
+            extractValue: (ChangedSettingResponse) -> T
+        ) {
+            try {
+                userSetting.set(
+                    value = extractValue(changedSettingResponse),
+                    needsSync = false,
+                )
+            } catch (e: Exception) {
+                LogBuffer.e(LogBuffer.TAG_INVALID_STATE, "Invalid $nameForLogs value: ${changedSettingResponse.value}")
             }
         }
 

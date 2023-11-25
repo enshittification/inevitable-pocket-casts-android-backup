@@ -3,6 +3,7 @@ package au.com.shiftyjelly.pocketcasts.preferences.model
 import android.content.SharedPreferences
 import au.com.shiftyjelly.pocketcasts.localization.R
 import au.com.shiftyjelly.pocketcasts.preferences.UserSetting
+import au.com.shiftyjelly.pocketcasts.preferences.UserSettingManager
 
 // Be careful changing these values because we also use them as properties for Tracks
 private const val SORT_TYPE_DATE_ADDED_NEWEST_TO_OLDEST = "date_added_newest_to_oldest"
@@ -30,10 +31,12 @@ enum class BookmarksSortTypeForPodcast(
         sharedPrefKey: String,
         defaultValue: BookmarksSortTypeForPodcast,
         sharedPrefs: SharedPreferences,
+        userSettingManager: UserSettingManager,
     ) : UserSetting.PrefFromString<BookmarksSortTypeForPodcast>(
         sharedPrefKey = sharedPrefKey,
         defaultValue = defaultValue,
         sharedPrefs = sharedPrefs,
+        userSettingManager = userSettingManager,
         fromString = { str ->
             BookmarksSortTypeForPodcast.values().find { it.key == str }
                 ?: defaultValue

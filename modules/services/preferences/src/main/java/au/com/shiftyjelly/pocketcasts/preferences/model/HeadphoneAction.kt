@@ -3,6 +3,7 @@ package au.com.shiftyjelly.pocketcasts.preferences.model
 import android.content.SharedPreferences
 import au.com.shiftyjelly.pocketcasts.models.to.SubscriptionStatus
 import au.com.shiftyjelly.pocketcasts.preferences.UserSetting
+import au.com.shiftyjelly.pocketcasts.preferences.UserSettingManager
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.Feature
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.FeatureFlag
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.UserTier
@@ -24,11 +25,13 @@ class HeadphoneActionUserSetting(
     sharedPrefKey: String,
     defaultAction: HeadphoneAction,
     sharedPrefs: SharedPreferences,
+    userSettingManager: UserSettingManager,
     subscriptionStatusFlow: StateFlow<SubscriptionStatus?>,
 ) : UserSetting.PrefFromInt<HeadphoneAction>(
     sharedPrefKey = sharedPrefKey,
     defaultValue = defaultAction,
     sharedPrefs = sharedPrefs,
+    userSettingManager = userSettingManager,
     fromInt = {
         val userTier = (subscriptionStatusFlow.value as? SubscriptionStatus.Paid)?.tier?.toUserTier()
             ?: UserTier.Free
