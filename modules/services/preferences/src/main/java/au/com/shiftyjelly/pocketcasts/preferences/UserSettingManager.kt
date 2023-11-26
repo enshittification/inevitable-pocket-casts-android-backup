@@ -17,8 +17,9 @@ class UserSettingManager @Inject constructor() {
     }
 
     fun onSignOut() {
+        // Mark all user settings as not needing to be synced
         userSettings.forEach {
-            it.modifiedAt = null
+            it.modifiedAtTimeForSync = null
         }
     }
 }

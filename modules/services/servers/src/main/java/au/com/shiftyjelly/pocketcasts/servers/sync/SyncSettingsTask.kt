@@ -35,7 +35,7 @@ class SyncSettingsTask(val context: Context, val parameters: WorkerParameters) :
                 settings.skipBackInSecs,
                 settings.skipForwardInSecs,
             ).forEach {
-                it.needsSync = false
+                it.modifiedAtTimeForSync = null
             }
             LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Settings synced")
 
@@ -143,7 +143,7 @@ class SyncSettingsTask(val context: Context, val parameters: WorkerParameters) :
 
 private fun <T> UserSetting<T>.toNamedChangedSetting(): NamedChangedSetting<T>? =
     // Only create an updated setting if the modifiedAt time is not null
-    modifiedAt?.let { modifiedAt ->
+    modifiedAtTimeForSync?.let { modifiedAt ->
         NamedChangedSetting(
             value = value,
             modifiedAt = modifiedAt,

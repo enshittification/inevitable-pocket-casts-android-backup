@@ -16,24 +16,18 @@ abstract class UserSetting<T>(
         userSettingManager.addUserSetting(this)
     }
 
-    private val needsSyncKey = "${sharedPrefKey}NeedsSync"
-
-    var needsSync: Boolean
-        get() = sharedPrefs.getBoolean(needsSyncKey, false)
+    private val modifiedAtKey = "${sharedPrefKey}ModifiedAt"
+    var modifiedAtTimeForSync: String?
+        get() = sharedPrefs.getString(modifiedAtKey, null)
         set(value) {
             sharedPrefs.edit().run {
-                putBoolean(needsSyncKey, value)
+                putString(modifiedAtKey, value)
                 apply()
             }
         }
 
-    var modifiedAt: String? = null
-
     // Returns the value to sync if sync is needed. Returns null if sync is not needed.
-    fun getSyncValue(): T? {
-        val needsSync = sharedPrefs.getBoolean(needsSyncKey, false)
-        return if (needsSync) value else null
-    }
+    fun getSyncValue(): T? = if (modifiedAtTimeForSync != null) value else null
 
     // These are lazy because (1) the class needs to initialize before calling get() and
     // (2) we don't want to get the current value from SharedPreferences for every
@@ -64,10 +58,9 @@ abstract class UserSetting<T>(
         persist(value, commit)
         _flow.value = value
 
-        // If needsSync is false, we shouldn't overwrite previous values that need to be synced.
+        // If needsSync is false, we shouldn't overwrite previous values that might have needed to be synced.
         if (needsSync) {
-            this.needsSync = true
-            this.modifiedAt = Instant.now().toString()
+            this.modifiedAtTimeForSync = Instant.now().toString()
         }
     }
 
