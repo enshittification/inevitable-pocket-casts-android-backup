@@ -3,6 +3,8 @@
 *   Bug Fixes:
     *   Fix user files not getting deleted after marking an episode as played
         ([#1548](https://github.com/Automattic/pocket-casts-android/pull/1548))
+    *   Fix issues where multi-select on one screen would affect another screen
+        ([#1579](https://github.com/Automattic/pocket-casts-android/pull/1579))
 
 7.53
 -----
