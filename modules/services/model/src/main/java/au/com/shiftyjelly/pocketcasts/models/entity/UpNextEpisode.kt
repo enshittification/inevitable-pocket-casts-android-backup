@@ -23,7 +23,7 @@ data class UpNextEpisode(
             uuid = episodeUuid,
             podcastUuid = podcastUuid ?: "",
             title = title,
-            publishedDate = publishedDate ?: Date(),
+            publishedDateNullable = publishedDate ?: Date(),
             downloadUrl = downloadUrl
         )
     }

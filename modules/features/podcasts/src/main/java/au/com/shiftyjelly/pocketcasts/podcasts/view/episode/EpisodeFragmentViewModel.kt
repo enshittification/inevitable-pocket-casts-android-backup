@@ -88,7 +88,7 @@ class EpisodeFragmentViewModel @Inject constructor(
                 if (episode != null) {
                     Maybe.just(episode)
                 } else {
-                    episodeManager.downloadMissingEpisode(episodeUuid, podcastUuid, PodcastEpisode(uuid = episodeUuid, publishedDate = Date()), podcastManager, downloadMetaData = true).flatMap { missingEpisode ->
+                    episodeManager.downloadMissingEpisode(episodeUuid, podcastUuid, PodcastEpisode(uuid = episodeUuid, publishedDateNullable = Date()), podcastManager, downloadMetaData = true).flatMap { missingEpisode ->
                         if (missingEpisode is PodcastEpisode) {
                             Maybe.just(missingEpisode)
                         } else {

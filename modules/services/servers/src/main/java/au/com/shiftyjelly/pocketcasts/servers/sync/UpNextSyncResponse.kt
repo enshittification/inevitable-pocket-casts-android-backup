@@ -25,7 +25,7 @@ data class UpNextSyncResponse(
         fun toSkeletonEpisode(podcastUuid: String): PodcastEpisode {
             return PodcastEpisode(
                 uuid = uuid,
-                publishedDate = published?.parseIsoDate() ?: Date(),
+                publishedDateNullable = published?.parseIsoDate() ?: Date(),
                 addedDate = Date(),
                 playingStatus = EpisodePlayingStatus.NOT_PLAYED,
                 episodeStatus = EpisodeStatusEnum.NOT_DOWNLOADED,

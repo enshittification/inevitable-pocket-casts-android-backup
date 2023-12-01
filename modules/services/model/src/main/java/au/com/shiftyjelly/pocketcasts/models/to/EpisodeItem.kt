@@ -16,7 +16,7 @@ data class EpisodeItem(
             uuid = uuid,
             title = title,
             duration = duration,
-            publishedDate = publishedAt,
+            publishedDateNullable = publishedAt,
             podcastUuid = podcastUuid
         )
 }

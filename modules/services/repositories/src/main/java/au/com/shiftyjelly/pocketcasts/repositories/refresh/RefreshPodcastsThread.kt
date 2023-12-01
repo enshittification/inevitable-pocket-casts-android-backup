@@ -408,8 +408,8 @@ class RefreshPodcastsThread(
 
                 // order by published date
                 notificationsEpisodeAndPodcast.sortWith { episodePodcastOne, episodePodcastTwo ->
-                    val (_, _, publishedDate) = episodePodcastOne.first
-                    val (_, _, publishedDate1) = episodePodcastTwo.first
+                    val publishedDate = episodePodcastOne.first.publishedDate
+                    val publishedDate1 = episodePodcastTwo.first.publishedDate
                     publishedDate1.compareTo(publishedDate)
                 }
 
@@ -420,8 +420,9 @@ class RefreshPodcastsThread(
                     val notificationLines = ArrayList<CharSequence>()
 
                     for (episodePodcast in notificationsEpisodeAndPodcast) {
-                        val (uuid, _, _, title) = episodePodcast.second
-                        val (_, _, _, title1) = episodePodcast.first
+                        val uuid = episodePodcast.second.uuid
+                        val title = episodePodcast.second.title
+                        val title1 = episodePodcast.first.title
                         // create the summary notification text lines
                         notificationLines.add(formatNotificationLine(title, title1, context))
                         // remember the first and last podcast for the artwork on phone and wearshowSummaryNotification

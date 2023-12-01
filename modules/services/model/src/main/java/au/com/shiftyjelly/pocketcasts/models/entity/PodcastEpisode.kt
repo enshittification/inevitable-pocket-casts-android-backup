@@ -9,7 +9,9 @@ import androidx.room.PrimaryKey
 import au.com.shiftyjelly.pocketcasts.localization.R
 import au.com.shiftyjelly.pocketcasts.models.type.EpisodePlayingStatus
 import au.com.shiftyjelly.pocketcasts.models.type.EpisodeStatusEnum
+import au.com.shiftyjelly.pocketcasts.utils.log.LogBuffer
 import java.io.Serializable
+import java.time.Instant
 import java.util.Date
 
 @Entity(
@@ -23,7 +25,9 @@ import java.util.Date
 data class PodcastEpisode(
     @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "uuid") override var uuid: String,
     @ColumnInfo(name = "episode_description") override var episodeDescription: String = "",
-    @ColumnInfo(name = "published_date") override var publishedDate: Date,
+    // This really should never be null, but we're allowing it to be nullable to make the database more robust
+    // When using this class, use the non-nullable publishedDate property instead
+    @ColumnInfo(name = "published_date") var publishedDateNullable: Date?,
     @ColumnInfo(name = "title") override var title: String = "",
     @ColumnInfo(name = "size_in_bytes") override var sizeInBytes: Long = 0,
     @ColumnInfo(name = "episode_status") override var episodeStatus: EpisodeStatusEnum = EpisodeStatusEnum.NOT_DOWNLOADED,
@@ -58,6 +62,11 @@ data class PodcastEpisode(
     @ColumnInfo(name = "download_task_id") override var downloadTaskId: String? = null,
     @ColumnInfo(name = "last_archive_interaction_date") var lastArchiveInteraction: Long? = null
 ) : BaseEpisode, Serializable {
+
+    override var publishedDate = publishedDateNullable ?: run {
+        LogBuffer.w(LogBuffer.TAG_INVALID_STATE, "publishedDate is null for episode $uuid")
+        Date(Instant.EPOCH.toEpochMilli())
+    }
 
     sealed class EpisodeType {
         object Regular : EpisodeType()

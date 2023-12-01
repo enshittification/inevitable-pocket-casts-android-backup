@@ -85,7 +85,7 @@ data class EpisodeInfo(
             fileType = fileType,
             sizeInBytes = fileSize ?: 0,
             duration = duration ?: 0.0,
-            publishedDate = publishedDate,
+            publishedDateNullable = publishedDate,
             podcastUuid = podcastUuid,
             addedDate = Date(),
             season = season,

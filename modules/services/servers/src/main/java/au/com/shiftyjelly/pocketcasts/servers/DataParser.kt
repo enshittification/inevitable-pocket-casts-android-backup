@@ -150,7 +150,7 @@ object DataParser {
             duration = getDouble(jsonEpisode, "duration_in_secs"),
             episodeDescription = getString(jsonEpisode, "description") ?: "",
             fileType = getString(jsonEpisode, "file_type"),
-            publishedDate = publishedAt,
+            publishedDateNullable = publishedAt,
             podcastUuid = podcastUuidOrJson,
             addedDate = Date()
         )
