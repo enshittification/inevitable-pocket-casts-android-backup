@@ -16,6 +16,7 @@ import au.com.shiftyjelly.pocketcasts.models.db.helper.ListenedNumbers
 import au.com.shiftyjelly.pocketcasts.models.db.helper.LongestEpisode
 import au.com.shiftyjelly.pocketcasts.models.db.helper.QueryHelper
 import au.com.shiftyjelly.pocketcasts.models.db.helper.UuidCount
+import au.com.shiftyjelly.pocketcasts.models.entity.MeowEpisode
 import au.com.shiftyjelly.pocketcasts.models.entity.Podcast
 import au.com.shiftyjelly.pocketcasts.models.entity.PodcastEpisode
 import au.com.shiftyjelly.pocketcasts.models.type.EpisodePlayingStatus
@@ -53,8 +54,8 @@ abstract class EpisodeDao {
     @Query("SELECT * FROM podcast_episodes WHERE download_task_id IS NOT NULL")
     abstract fun observeDownloadingEpisodes(): LiveData<List<PodcastEpisode>>
 
-    @Query("SELECT * FROM podcast_episodes WHERE download_task_id IS NOT NULL")
-    abstract fun observeDownloadingEpisodesRx(): Flowable<List<PodcastEpisode>>
+    @Query("SELECT uuid, download_task_id FROM podcast_episodes WHERE download_task_id IS NOT NULL")
+    abstract fun observeDownloadingEpisodesRx(): Flowable<List<MeowEpisode>>
 
     @Query("SELECT * FROM podcast_episodes WHERE uuid IN (:uuids)")
     abstract fun findByUuids(uuids: List<String>): List<PodcastEpisode>

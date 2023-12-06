@@ -8,6 +8,7 @@ import au.com.shiftyjelly.pocketcasts.models.db.helper.ListenedNumbers
 import au.com.shiftyjelly.pocketcasts.models.db.helper.LongestEpisode
 import au.com.shiftyjelly.pocketcasts.models.db.helper.YearOverYearListeningTime
 import au.com.shiftyjelly.pocketcasts.models.entity.BaseEpisode
+import au.com.shiftyjelly.pocketcasts.models.entity.MeowEpisode
 import au.com.shiftyjelly.pocketcasts.models.entity.Podcast
 import au.com.shiftyjelly.pocketcasts.models.entity.PodcastEpisode
 import au.com.shiftyjelly.pocketcasts.models.type.EpisodePlayingStatus
@@ -144,7 +145,7 @@ interface EpisodeManager {
     fun markAsUnplayed(episodes: List<BaseEpisode>)
     fun unarchiveAllInListAsync(episodes: List<PodcastEpisode>)
     suspend fun findEpisodeByUuid(uuid: String): BaseEpisode?
-    fun observeDownloadingEpisodesRx(): Flowable<List<BaseEpisode>>
+    fun observeDownloadingEpisodesRx(): Flowable<List<MeowEpisode>>
     fun setDownloadFailed(episode: BaseEpisode, errorMessage: String)
     fun observeEpisodeCount(queryAfterWhere: String): Flowable<Int>
     suspend fun updatePlaybackInteractionDate(episode: BaseEpisode?)
