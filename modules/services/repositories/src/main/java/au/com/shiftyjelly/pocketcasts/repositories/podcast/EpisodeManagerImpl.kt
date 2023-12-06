@@ -17,6 +17,7 @@ import au.com.shiftyjelly.pocketcasts.models.db.helper.LongestEpisode
 import au.com.shiftyjelly.pocketcasts.models.db.helper.QueryHelper
 import au.com.shiftyjelly.pocketcasts.models.db.helper.YearOverYearListeningTime
 import au.com.shiftyjelly.pocketcasts.models.entity.BaseEpisode
+import au.com.shiftyjelly.pocketcasts.models.entity.MeowEpisode
 import au.com.shiftyjelly.pocketcasts.models.entity.Podcast
 import au.com.shiftyjelly.pocketcasts.models.entity.PodcastEpisode
 import au.com.shiftyjelly.pocketcasts.models.entity.UserEpisode
@@ -248,8 +249,8 @@ class EpisodeManagerImpl @Inject constructor(
     }
 
     @Suppress("USELESS_CAST")
-    override fun observeDownloadingEpisodesRx(): Flowable<List<BaseEpisode>> {
-        return episodeDao.observeDownloadingEpisodesRx().map { it as List<BaseEpisode> }.mergeWith(userEpisodeManager.observeDownloadUserEpisodes())
+    override fun observeDownloadingEpisodesRx(): Flowable<List<MeowEpisode>> {
+        return episodeDao.observeDownloadingEpisodesRx() //.mergeWith(userEpisodeManager.observeDownloadUserEpisodes())
     }
 
     override fun findEpisodesByUuids(uuids: Array<String>, ordered: Boolean): List<PodcastEpisode> =
