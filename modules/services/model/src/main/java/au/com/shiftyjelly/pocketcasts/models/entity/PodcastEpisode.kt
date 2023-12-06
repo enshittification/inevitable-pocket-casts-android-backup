@@ -11,7 +11,13 @@ import au.com.shiftyjelly.pocketcasts.models.type.EpisodePlayingStatus
 import au.com.shiftyjelly.pocketcasts.models.type.EpisodeStatusEnum
 import java.io.Serializable
 import java.util.Date
-
+@Entity(
+        tableName = "podcast_episodes",
+)
+data class MeowEpisode(
+        @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "uuid") var uuid: String,
+        @ColumnInfo(name = "download_task_id") var downloadTaskId: String? = null
+) : Serializable
 @Entity(
     tableName = "podcast_episodes",
     indices = [
@@ -20,6 +26,7 @@ import java.util.Date
         Index(name = "episode_published_date", value = arrayOf("published_date"))
     ]
 )
+
 data class PodcastEpisode(
     @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "uuid") override var uuid: String,
     @ColumnInfo(name = "episode_description") override var episodeDescription: String = "",
