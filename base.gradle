@@ -190,6 +190,7 @@ dependencies {
     implementation libs.device.names
     implementation libs.flexbox
     implementation libs.fragment.ktx
+    implementation libs.glance.appwidget
     implementation libs.glide
     implementation libs.glide.okhttp
     implementation libs.guava
