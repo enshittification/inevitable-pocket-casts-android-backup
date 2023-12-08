@@ -1,9 +1,11 @@
 package au.com.shiftyjelly.pocketcasts.core.ui.widget
 
 import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import androidx.glance.ExperimentalGlanceApi
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import au.com.shiftyjelly.pocketcasts.repositories.playback.PlaybackManager
 import au.com.shiftyjelly.pocketcasts.repositories.widget.WidgetManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -18,8 +20,10 @@ import kotlin.coroutines.CoroutineContext
  * The podcast widget.
  * This widget can't move from the core package or it gets deleted when the new APK is installed.
  */
+@OptIn(ExperimentalGlanceApi::class)
 @AndroidEntryPoint
-class PodcastWidget : AppWidgetProvider(), CoroutineScope {
+class PodcastWidget : GlanceAppWidgetReceiver(), CoroutineScope {
+    override val glanceAppWidget: GlanceAppWidget = GlancePodcastWidget()
 
     @Inject lateinit var widgetManager: WidgetManager
     @Inject lateinit var playbackManager: PlaybackManager
@@ -27,9 +31,10 @@ class PodcastWidget : AppWidgetProvider(), CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Default
 
-    override fun onUpdate(context: Context, manager: AppWidgetManager, widgetIds: IntArray) {
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
         launch {
-            widgetManager.updateWidgetFromProvider(context, manager, widgetIds, playbackManager)
+            widgetManager.updateWidgetFromProvider(context, appWidgetManager, appWidgetIds, playbackManager)
         }
 
         Timber.i("Widget onUpdate called.")
