@@ -13,6 +13,7 @@ android {
     namespace = "au.com.shiftyjelly.pocketcasts.repositories"
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 }
 
