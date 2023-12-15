@@ -12,6 +12,7 @@ import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Url
 import java.util.Date
 
 @JsonClass(generateAdapter = true)
@@ -62,12 +63,48 @@ data class PodcastRatingsResponse(
     )
 }
 
+@JsonClass(generateAdapter = true)
+data class PodcastAndLastModified(
+    @field:Json(name = "uuid") val uuid: String,
+    @field:Json(name = "last_modified") val lastModified: String?,
+)
+
+@JsonClass(generateAdapter = true)
+data class PodcastsUpdateBody(
+    @field:Json(name = "podcasts") val podcasts: List<PodcastAndLastModified>,
+)
+
+@JsonClass(generateAdapter = true)
+data class PodcastUpdateResponse(
+    @field:Json(name = "uuid") val uuid: String,
+    @field:Json(name = "url") val url: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class PodcastsUpdateResponse(
+    @field:Json(name = "podcasts") val podcasts: List<PodcastUpdateResponse>,
+)
+
 interface PodcastCacheServer {
-    @GET("/mobile/podcast/full/{podcastUuid}")
-    fun getPodcastAndEpisodesRaw(@Path("podcastUuid") podcastUuid: String): Single<Response<PodcastResponse>>
+
+    @POST("/podcasts/update")
+    suspend fun getPodcastsUpdate(@Body body: PodcastsUpdateBody): PodcastsUpdateResponse
 
     @GET("/mobile/podcast/full/{podcastUuid}")
-    fun getPodcastAndEpisodes(@Path("podcastUuid") podcastUuid: String): Single<PodcastResponse>
+    suspend fun getPodcastAndEpisodes(@Path("podcastUuid") podcastUuid: String): Response<PodcastResponse>
+
+    @GET
+    suspend fun getPodcastAndEpisodesByUrl(@Url url: String): Response<PodcastResponse>
+
+    @GET("/mobile/podcast/full/{podcastUuid}")
+    @Headers("Cache-Control: only-if-cached, max-stale=7776000") // Use offline cache available for 90 days
+    suspend fun getPodcastAndEpisodesCache(@Path("podcastUuid") podcastUuid: String): Response<PodcastResponse>
+
+    @GET("/mobile/podcast/full/{podcastUuid}")
+    fun getPodcastAndEpisodesResponseSingle(@Path("podcastUuid") podcastUuid: String): Single<Response<PodcastResponse>>
+
+    @GET("/mobile/podcast/full/{podcastUuid}")
+    fun getPodcastAndEpisodesSingle(@Path("podcastUuid") podcastUuid: String): Single<PodcastResponse>
 
     @GET("/mobile/show_notes/full/{podcastUuid}")
     suspend fun getShowNotes(@Path("podcastUuid") podcastUuid: String): ShowNotesResponse

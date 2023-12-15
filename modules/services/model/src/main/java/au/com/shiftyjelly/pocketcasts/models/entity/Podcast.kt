@@ -75,6 +75,7 @@ data class Podcast(
     @ColumnInfo(name = "trim_silence_level") var trimMode: TrimMode = TrimMode.OFF,
     @ColumnInfo(name = "refresh_available") var refreshAvailable: Boolean = false,
     @ColumnInfo(name = "folder_uuid") var folderUuid: String? = null,
+    @ColumnInfo(name = "last_modified") var lastModified: String? = null,
     @ColumnInfo(name = "licensing") var licensing: Licensing = Licensing.KEEP_EPISODES,
     @ColumnInfo(name = "isPaid") var isPaid: Boolean = false,
     @Embedded(prefix = "bundle") var singleBundle: Bundle? = null,

@@ -154,6 +154,9 @@ abstract class PodcastDao {
     @Query("UPDATE podcasts SET sync_status = :syncStatus WHERE uuid = :uuid")
     abstract fun updateSyncStatus(syncStatus: Int, uuid: String)
 
+    @Query("UPDATE podcasts SET last_modified = :lastModified WHERE uuid = :uuid")
+    abstract fun updateLastModified(lastModified: String?, uuid: String)
+
     @Query("UPDATE podcasts SET show_archived = :showArchived WHERE uuid = :uuid")
     abstract suspend fun updateShowArchived(uuid: String, showArchived: Boolean)
 

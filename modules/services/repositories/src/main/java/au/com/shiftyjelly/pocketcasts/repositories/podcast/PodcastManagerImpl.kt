@@ -22,11 +22,13 @@ import au.com.shiftyjelly.pocketcasts.repositories.playback.PlaybackManager
 import au.com.shiftyjelly.pocketcasts.repositories.refresh.RefreshPodcastsTask
 import au.com.shiftyjelly.pocketcasts.repositories.refresh.RefreshPodcastsThread
 import au.com.shiftyjelly.pocketcasts.repositories.sync.SyncManager
+import au.com.shiftyjelly.pocketcasts.servers.extensions.lastModified
 import au.com.shiftyjelly.pocketcasts.servers.extensions.wasCached
+import au.com.shiftyjelly.pocketcasts.servers.podcast.PodcastAndLastModified
 import au.com.shiftyjelly.pocketcasts.servers.podcast.PodcastCacheServerManager
+import au.com.shiftyjelly.pocketcasts.servers.podcast.PodcastResponse
 import au.com.shiftyjelly.pocketcasts.servers.refresh.RefreshServerManager
 import au.com.shiftyjelly.pocketcasts.utils.DateUtil
-import au.com.shiftyjelly.pocketcasts.utils.Optional
 import au.com.shiftyjelly.pocketcasts.utils.log.LogBuffer
 import com.jakewharton.rxrelay2.PublishRelay
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,7 +36,6 @@ import io.reactivex.BackpressureStrategy
 import io.reactivex.Flowable
 import io.reactivex.Maybe
 import io.reactivex.Single
-import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import io.sentry.Sentry
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import retrofit2.Response
 import timber.log.Timber
 import java.util.Calendar
 import java.util.Date
@@ -197,134 +199,135 @@ class PodcastManagerImpl @Inject constructor(
         refreshPodcasts("login")
     }
 
-    @Suppress("NAME_SHADOWING")
-    override fun refreshPodcastInBackground(existingPodcast: Podcast, playbackManager: PlaybackManager) {
-        launch {
-            try {
-                LogBuffer.i(
-                    LogBuffer.TAG_BACKGROUND_TASKS,
-                    "Refreshing podcast ${existingPodcast.uuid}"
-                )
-                val updatedPodcast = cacheServerManager.getPodcastResponse(existingPodcast.uuid)
-                    .map {
-                        val responsePodcast = it.body()?.toPodcast()
-                        if (it.wasCached()) {
-                            Optional.empty<Podcast>()
-                        } else {
-                            Optional.of(responsePodcast)
-                        }
-                    }
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribeOn(Schedulers.io())
-                    .onErrorReturnItem(Optional.empty())
-                    .blockingGet()
+    override suspend fun refreshPodcasts(podcasts: List<Podcast>, playbackManager: PlaybackManager) {
+        // Find existing last modified dates
+        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${podcasts.size} podcasts to be refreshed")
+        val podcastsLastModified = podcasts.map { podcast ->
+            val result = PodcastAndLastModified(uuid = podcast.uuid, lastModified = podcast.lastModified)
+            LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${result.uuid} last modified ${result.lastModified}")
+            result
+        }
+        val uuidToPodcast = podcasts.associateBy({ it.uuid }, { it })
+        // Compare all the podcast last modified dates to the server
+        val podcastUpdates = cacheServerManager.getPodcastsUpdate(podcastsLastModified)
+        // Update only the podcasts that have changed
+        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${podcastUpdates.podcasts.size} podcasts to downloaded")
+        for (podcastUpdate in podcastUpdates.podcasts) {
+            val response = cacheServerManager.getPodcastResponseByUrl(podcastUpdate.url)
+            val podcast = uuidToPodcast[podcastUpdate.uuid] ?: continue
+            refreshPodcast(podcast, playbackManager, response)
+            updateLastModified(podcastUpdate.uuid, response.lastModified())
+        }
+    }
 
-                updatedPodcast.get()?.let { updatedPodcast ->
-                    val originalPodcast = existingPodcast.copy()
-                    existingPodcast.title = updatedPodcast.title
-                    existingPodcast.author = updatedPodcast.author
-                    existingPodcast.podcastCategory = updatedPodcast.podcastCategory
-                    existingPodcast.podcastDescription = updatedPodcast.podcastDescription
-                    existingPodcast.estimatedNextEpisode = updatedPodcast.estimatedNextEpisode
-                    existingPodcast.episodeFrequency = updatedPodcast.episodeFrequency
-                    existingPodcast.refreshAvailable = updatedPodcast.refreshAvailable
-                    val existingEpisodes = episodeManager.findEpisodesByPodcastOrderedByPublishDate(existingPodcast)
-                    val mostRecentEpisode = existingEpisodes.firstOrNull()
-                    val insertEpisodes = mutableListOf<PodcastEpisode>()
-                    updatedPodcast.episodes.map { newEpisode ->
-                        val existingEpisode = existingEpisodes.find { it.uuid == newEpisode.uuid }
-                        if (existingEpisode != null) {
-                            val originalEpisode = existingEpisode.copy()
-                            existingEpisode.title = newEpisode.title
-                            existingEpisode.downloadUrl = newEpisode.downloadUrl
-                            // as new episodes are added a task is run to get the content type and file size from the server file as it is more reliable
-                            if (existingEpisode.fileType.isNullOrBlank()) {
-                                existingEpisode.fileType = newEpisode.fileType
-                            }
-                            if (existingEpisode.sizeInBytes <= 0) {
-                                existingEpisode.sizeInBytes = newEpisode.sizeInBytes
-                            }
-                            if (existingEpisode.duration <= 0) {
-                                existingEpisode.duration = newEpisode.duration
-                            }
-                            existingEpisode.publishedDate = newEpisode.publishedDate
-                            existingEpisode.season = newEpisode.season
-                            existingEpisode.number = newEpisode.number
-                            existingEpisode.type = newEpisode.type
-                            // only update the db if the fields have changed
-                            if (originalEpisode != existingEpisode) {
-                                episodeManager.update(existingEpisode)
-                            }
-                        } else {
-                            // don't add anything newer than the latest episode so it runs through the refresh logic (auto download, auto add to Up Next etc
-                            if (!existingPodcast.isSubscribed || (
-                                mostRecentEpisode != null && newEpisode.publishedDate.before(
-                                        mostRecentEpisode.publishedDate
-                                    )
-                                )
-                            ) {
-                                newEpisode.podcastUuid = existingPodcast.uuid
-                                newEpisode.episodeStatus = EpisodeStatusEnum.NOT_DOWNLOADED
-                                newEpisode.playingStatus = EpisodePlayingStatus.NOT_PLAYED
+    override suspend fun refreshPodcast(existingPodcast: Podcast, playbackManager: PlaybackManager, response: Response<PodcastResponse>) {
+        try {
+            if (response.wasCached()) {
+                LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: Podcast ${existingPodcast.uuid} was cached, not refreshing")
+                return
+            }
+            val updatedPodcast = response.body()?.toPodcast()
+            if (updatedPodcast == null) {
+                LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: Podcast ${existingPodcast.uuid} was not found, not refreshing")
+                return
+            }
 
-                                // for podcast you're subscribed to, if we find episodes older than a week, we add them in as archived so they don't flood your filters, etc
-                                val newEpisodeIs7DaysOld = if (mostRecentEpisode != null) {
-                                    DateUtil.daysBetweenTwoDates(
-                                        newEpisode.publishedDate,
-                                        mostRecentEpisode.publishedDate
-                                    ) >= 7
-                                } else {
-                                    true
-                                }
-                                newEpisode.isArchived =
-                                    existingPodcast.isSubscribed && newEpisodeIs7DaysOld
+            val originalPodcast = existingPodcast.copy()
+            existingPodcast.title = updatedPodcast.title
+            existingPodcast.author = updatedPodcast.author
+            existingPodcast.podcastCategory = updatedPodcast.podcastCategory
+            existingPodcast.podcastDescription = updatedPodcast.podcastDescription
+            existingPodcast.estimatedNextEpisode = updatedPodcast.estimatedNextEpisode
+            existingPodcast.episodeFrequency = updatedPodcast.episodeFrequency
+            existingPodcast.refreshAvailable = updatedPodcast.refreshAvailable
+            val existingEpisodes = episodeManager.findEpisodesByPodcastOrderedByPublishDate(existingPodcast)
+            val mostRecentEpisode = existingEpisodes.firstOrNull()
+            val insertEpisodes = mutableListOf<PodcastEpisode>()
+            updatedPodcast.episodes.forEach { newEpisode ->
+                val existingEpisode = existingEpisodes.find { it.uuid == newEpisode.uuid }
+                if (existingEpisode != null) {
+                    val originalEpisode = existingEpisode.copy()
+                    existingEpisode.title = newEpisode.title
+                    existingEpisode.downloadUrl = newEpisode.downloadUrl
+                    // as new episodes are added a task is run to get the content type and file size from the server file as it is more reliable
+                    if (existingEpisode.fileType.isNullOrBlank()) {
+                        existingEpisode.fileType = newEpisode.fileType
+                    }
+                    if (existingEpisode.sizeInBytes <= 0) {
+                        existingEpisode.sizeInBytes = newEpisode.sizeInBytes
+                    }
+                    if (existingEpisode.duration <= 0) {
+                        existingEpisode.duration = newEpisode.duration
+                    }
+                    existingEpisode.publishedDate = newEpisode.publishedDate
+                    existingEpisode.season = newEpisode.season
+                    existingEpisode.number = newEpisode.number
+                    existingEpisode.type = newEpisode.type
+                    // only update the db if the fields have changed
+                    if (originalEpisode != existingEpisode) {
+                        episodeManager.update(existingEpisode)
+                    }
+                } else {
+                    if (existingPodcast.isSubscribed) {
+                        newEpisode.addedDate = Date()
+                        existingPodcast.addEpisode(newEpisode)
+                        insertEpisodes.add(newEpisode)
+                    } else if (mostRecentEpisode != null && newEpisode.publishedDate.before(mostRecentEpisode.publishedDate)) {
+                        newEpisode.podcastUuid = existingPodcast.uuid
+                        newEpisode.episodeStatus = EpisodeStatusEnum.NOT_DOWNLOADED
+                        newEpisode.playingStatus = EpisodePlayingStatus.NOT_PLAYED
 
-                                newEpisode.archivedModified = Date().time
-                                newEpisode.lastArchiveInteraction = Date().time
-                                // give it an old added date so it doesn't trigger a new episode notification
-                                newEpisode.addedDate = existingPodcast.addedDate ?: Date()
-                                existingPodcast.addEpisode(newEpisode)
-                                insertEpisodes.add(newEpisode)
-                            }
-                        }
-                    }
-                    if (insertEpisodes.isNotEmpty()) {
-                        episodeManager.add(
-                            insertEpisodes,
-                            podcastUuid = existingPodcast.uuid,
-                            downloadMetaData = false
-                        )
-                    }
-                    val episodeUuidsToDelete = existingEpisodes.map { it.uuid }
-                        .subtract(updatedPodcast.episodes.map { it.uuid })
-                    val calendar = Calendar.getInstance()
-                    calendar.add(Calendar.DAY_OF_MONTH, -14)
-                    val twoWeeksAgo = calendar.time
-                    val episodesToDelete =
-                        episodeUuidsToDelete.mapNotNull { uuid -> existingEpisodes.find { it.uuid == uuid } }
-                            .filter {
-                                it.addedDate.before(twoWeeksAgo) && episodeManager.episodeCanBeCleanedUp(
-                                    it,
-                                    playbackManager
-                                )
-                            }
-                    if (episodesToDelete.isNotEmpty()) {
-                        episodeManager.deleteEpisodesWithoutSync(episodesToDelete, playbackManager)
-                    }
+                        // for podcast you're subscribed to, if we find episodes older than a week, we add them in as archived so they don't flood your filters, etc
+                        val newEpisodeIs7DaysOld = DateUtil.daysBetweenTwoDates(newEpisode.publishedDate, mostRecentEpisode.publishedDate) >= 7
+                        newEpisode.isArchived = existingPodcast.isSubscribed && newEpisodeIs7DaysOld
 
-                    if (originalPodcast != existingPodcast) {
-                        LogBuffer.i(
-                            LogBuffer.TAG_BACKGROUND_TASKS,
-                            "Refresh required update for podcast ${existingPodcast.uuid}"
-                        )
-                        updatePodcast(existingPodcast)
+                        newEpisode.archivedModified = Date().time
+                        newEpisode.lastArchiveInteraction = Date().time
+                        // give it an old added date so it doesn't trigger a new episode notification
+                        newEpisode.addedDate = existingPodcast.addedDate ?: Date()
+                        existingPodcast.addEpisode(newEpisode)
+                        insertEpisodes.add(newEpisode)
                     }
                 }
-            } catch (e: Exception) {
-                LogBuffer.e(LogBuffer.TAG_BACKGROUND_TASKS, e, "Error refreshing podcast ${existingPodcast.uuid} in background")
-                Sentry.captureException(e)
             }
+            if (insertEpisodes.isNotEmpty()) {
+                episodeManager.add(
+                    insertEpisodes,
+                    podcastUuid = existingPodcast.uuid,
+                    downloadMetaData = false
+                )
+            }
+            val episodeUuidsToDelete = existingEpisodes.map { it.uuid }
+                .subtract(updatedPodcast.episodes.map { it.uuid })
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.DAY_OF_MONTH, -14)
+            val twoWeeksAgo = calendar.time
+            val episodesToDelete =
+                episodeUuidsToDelete.mapNotNull { uuid -> existingEpisodes.find { it.uuid == uuid } }
+                    .filter {
+                        it.addedDate.before(twoWeeksAgo) && episodeManager.episodeCanBeCleanedUp(it, playbackManager)
+                    }
+            if (episodesToDelete.isNotEmpty()) {
+                episodeManager.deleteEpisodesWithoutSync(episodesToDelete, playbackManager)
+            }
+
+            if (originalPodcast != existingPodcast) {
+                LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: Podcast ${existingPodcast.uuid} refreshed. Downloaded and updated database.")
+                updatePodcast(existingPodcast)
+            } else {
+                LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: Podcast ${existingPodcast.uuid} refreshed. Downloaded and no updates required.")
+            }
+        } catch (e: Exception) {
+            LogBuffer.e(LogBuffer.TAG_BACKGROUND_TASKS, e, "Refresh: Podcast ${existingPodcast.uuid} failed to refresh.")
+            Sentry.captureException(e)
         }
+    }
+
+    override fun refreshPodcastInBackground(existingPodcast: Podcast, playbackManager: PlaybackManager) {
+//        launch {
+//            val response = cacheServerManager.getPodcastResponse(existingPodcast.uuid)
+//            refreshPodcast(existingPodcast, playbackManager, response)
+//        }
     }
 
     override fun reloadFoldersFromServer() {
@@ -492,6 +495,10 @@ class PodcastManagerImpl @Inject constructor(
 
     private fun updateSyncStatus(podcastUuid: String, syncStatus: Int) {
         podcastDao.updateSyncStatus(syncStatus, podcastUuid)
+    }
+
+    private fun updateLastModified(podcastUuid: String, lastModified: String?) {
+        podcastDao.updateLastModified(lastModified, podcastUuid)
     }
 
     override fun updateGrouping(podcast: Podcast, grouping: PodcastGrouping) {

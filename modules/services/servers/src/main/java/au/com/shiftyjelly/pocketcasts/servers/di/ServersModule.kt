@@ -105,7 +105,7 @@ class ServersModule {
         }
 
         fun provideCache(folder: String, context: Context): Cache {
-            val cacheSize = 10 * 1024 * 1024 // 10 MB
+            val cacheSize = 100 * 1024 * 1024 // 100 MB
             val cacheDirectory = File(context.cacheDir.absolutePath, folder)
             return Cache(cacheDirectory, cacheSize.toLong())
         }

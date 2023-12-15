@@ -154,37 +154,61 @@ class RefreshPodcastsThread(
         taskHasBeenCancelled = true
     }
 
+    private val isNewRefresh = true
+
     /** REFRESH  */
     private fun refresh() {
         val entryPoint = getEntryPoint()
         val podcastManager = entryPoint.podcastManager()
         val serverManager = entryPoint.serverManager()
         val podcasts = podcastManager.findSubscribed()
-        val startTime = SystemClock.elapsedRealtime()
-        serverManager.refreshPodcastsSync(
-            podcasts,
-            object : ServerCallback<RefreshResponse> {
-                override fun dataReturned(result: RefreshResponse?) {
-                    val elapsedTime = String.format("%d ms", SystemClock.elapsedRealtime() - startTime)
-                    LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh - podcasts response - $elapsedTime")
-                    processRefreshResponse(result)
-                }
+        val playbackManager = entryPoint.playbackManager()
+        val settings = entryPoint.settings()
 
-                override fun onFailed(
-                    errorCode: Int,
-                    userMessage: String?,
-                    serverMessageId: String?,
-                    serverMessage: String?,
-                    throwable: Throwable?
-                ) {
-                    LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Not refreshing as server call failed errorCode: $errorCode serverMessage: ${serverMessage ?: ""}")
-                    if (throwable != null) {
-                        LogBuffer.e(LogBuffer.TAG_BACKGROUND_TASKS, throwable, "Server call failed")
-                    }
-                    refreshFailedOrCancelled("Not refreshing as server call failed errorCode: $errorCode serverMessage: ${serverMessage ?: ""}")
+        if (isNewRefresh) {
+            runBlocking {
+                val startTime = SystemClock.elapsedRealtime()
+                podcastManager.refreshPodcasts(podcasts, playbackManager)
+                val elapsedTime = String.format("%d ms", SystemClock.elapsedRealtime() - startTime)
+                LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh complete. ${podcasts.size} podcasts in $elapsedTime")
+
+                val syncRefreshState = sync()
+                if (syncRefreshState is RefreshState.Failed) {
+                    settings.setRefreshState(syncRefreshState)
+                } else {
+                    settings.setRefreshState(RefreshState.Success(Date(System.currentTimeMillis())))
                 }
             }
-        )
+        } else {
+            val startTime = SystemClock.elapsedRealtime()
+            serverManager.refreshPodcastsSync(
+                podcasts,
+                object : ServerCallback<RefreshResponse> {
+                    override fun dataReturned(result: RefreshResponse?) {
+                        val elapsedTime = String.format("%d ms", SystemClock.elapsedRealtime() - startTime)
+                        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh - podcasts response - $elapsedTime")
+                        processRefreshResponse(result)
+                    }
+
+                    override fun onFailed(
+                        errorCode: Int,
+                        userMessage: String?,
+                        serverMessageId: String?,
+                        serverMessage: String?,
+                        throwable: Throwable?
+                    ) {
+                        LogBuffer.i(
+                            LogBuffer.TAG_BACKGROUND_TASKS,
+                            "Not refreshing as server call failed errorCode: $errorCode serverMessage: ${serverMessage ?: ""}"
+                        )
+                        if (throwable != null) {
+                            LogBuffer.e(LogBuffer.TAG_BACKGROUND_TASKS, throwable, "Server call failed")
+                        }
+                        refreshFailedOrCancelled("Not refreshing as server call failed errorCode: $errorCode serverMessage: ${serverMessage ?: ""}")
+                    }
+                }
+            )
+        }
     }
 
     private fun processRefreshResponse(result: RefreshResponse?) {

@@ -12,10 +12,12 @@ import au.com.shiftyjelly.pocketcasts.models.type.EpisodesSortType
 import au.com.shiftyjelly.pocketcasts.models.type.TrimMode
 import au.com.shiftyjelly.pocketcasts.repositories.download.DownloadManager
 import au.com.shiftyjelly.pocketcasts.repositories.playback.PlaybackManager
+import au.com.shiftyjelly.pocketcasts.servers.podcast.PodcastResponse
 import io.reactivex.Flowable
 import io.reactivex.Maybe
 import io.reactivex.Single
 import kotlinx.coroutines.flow.Flow
+import retrofit2.Response
 import java.util.Date
 
 interface PodcastManager {
@@ -125,6 +127,8 @@ interface PodcastManager {
     fun refreshPodcastsIfRequired(fromLog: String)
     fun refreshPodcasts(fromLog: String)
     suspend fun refreshPodcastsAfterSignIn()
+    suspend fun refreshPodcasts(podcasts: List<Podcast>, playbackManager: PlaybackManager)
+    suspend fun refreshPodcast(existingPodcast: Podcast, playbackManager: PlaybackManager, response: Response<PodcastResponse>)
     fun refreshPodcastInBackground(existingPodcast: Podcast, playbackManager: PlaybackManager)
     fun reloadFoldersFromServer()
 

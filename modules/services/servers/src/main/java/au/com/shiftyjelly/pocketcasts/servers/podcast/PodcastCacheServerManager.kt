@@ -13,7 +13,11 @@ interface PodcastCacheServerManager {
     suspend fun getPodcastAndEpisode(podcastUuid: String, episodeUuid: String): Podcast
     fun searchEpisodes(podcastUuid: String, searchTerm: String): Single<List<String>>
     fun searchEpisodes(searchTerm: String): Single<EpisodeSearch>
-    fun getPodcastResponse(podcastUuid: String): Single<Response<PodcastResponse>>
+    suspend fun getPodcastResponse(podcastUuid: String): Response<PodcastResponse>
+    suspend fun getPodcastResponseByUrl(url: String): Response<PodcastResponse>
+    suspend fun getPodcastResponseCache(podcastUuid: String): Response<PodcastResponse>
+    suspend fun getPodcastsUpdate(podcastsLastModified: List<PodcastAndLastModified>): PodcastsUpdateResponse
+    fun getPodcastResponseSingle(podcastUuid: String): Single<Response<PodcastResponse>>
     suspend fun getPodcastRatings(podcastUuid: String): PodcastRatings
     suspend fun getShowNotes(podcastUuid: String): ShowNotesResponse
     suspend fun getShowNotesCache(podcastUuid: String): ShowNotesResponse?
