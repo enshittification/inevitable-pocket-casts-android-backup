@@ -46,6 +46,8 @@ import au.com.shiftyjelly.pocketcasts.servers.ServerManager
 import au.com.shiftyjelly.pocketcasts.servers.podcast.PodcastCacheServerManagerImpl
 import au.com.shiftyjelly.pocketcasts.servers.sync.exception.RefreshTokenExpiredException
 import au.com.shiftyjelly.pocketcasts.utils.Network
+import au.com.shiftyjelly.pocketcasts.utils.featureflag.Feature
+import au.com.shiftyjelly.pocketcasts.utils.featureflag.FeatureFlag
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.FeatureFlagWrapper
 import au.com.shiftyjelly.pocketcasts.utils.log.LogBuffer
 import dagger.hilt.EntryPoint
@@ -154,8 +156,6 @@ class RefreshPodcastsThread(
         taskHasBeenCancelled = true
     }
 
-    private val isNewRefresh = true
-
     /** REFRESH  */
     private fun refresh() {
         val entryPoint = getEntryPoint()
@@ -165,7 +165,7 @@ class RefreshPodcastsThread(
         val playbackManager = entryPoint.playbackManager()
         val settings = entryPoint.settings()
 
-        if (isNewRefresh) {
+        if (FeatureFlag.isEnabled(Feature.NEW_EPISODE_REFRESH)) {
             runBlocking {
                 val startTime = SystemClock.elapsedRealtime()
                 podcastManager.refreshPodcasts(podcasts, playbackManager)

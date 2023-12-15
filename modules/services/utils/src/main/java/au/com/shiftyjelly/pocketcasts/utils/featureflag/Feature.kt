@@ -52,6 +52,14 @@ enum class Feature(
         tier = FeatureTier.Free,
         hasFirebaseRemoteFlag = false,
         hasDevToggle = true
+    ),
+    NEW_EPISODE_REFRESH(
+        key = "new_episode_refresh",
+        title = "New Episode Refresh",
+        defaultValue = BuildConfig.DEBUG,
+        tier = FeatureTier.Free,
+        hasFirebaseRemoteFlag = false,
+        hasDevToggle = true
     );
 
     fun isCurrentlyExclusiveToPatron(

@@ -203,9 +203,7 @@ class PodcastManagerImpl @Inject constructor(
         // Find existing last modified dates
         LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${podcasts.size} podcasts to be refreshed")
         val podcastsLastModified = podcasts.map { podcast ->
-            val result = PodcastAndLastModified(uuid = podcast.uuid, lastModified = podcast.lastModified)
-            LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${result.uuid} last modified ${result.lastModified}")
-            result
+            PodcastAndLastModified(uuid = podcast.uuid, lastModified = podcast.lastModified)
         }
         val uuidToPodcast = podcasts.associateBy({ it.uuid }, { it })
         // Compare all the podcast last modified dates to the server
