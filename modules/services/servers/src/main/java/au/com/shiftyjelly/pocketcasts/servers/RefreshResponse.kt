@@ -14,7 +14,7 @@ class RefreshResponse {
         return updates[podcastUuid]
     }
 
-    fun addUpdate(podcastUuid: String, episodeIds: List<PodcastEpisode>) {
-        updates[podcastUuid] = episodeIds
+    fun addUpdate(podcastUuid: String, episodes: List<PodcastEpisode>) {
+        updates[podcastUuid] = episodes
     }
 }

@@ -22,6 +22,7 @@ import au.com.shiftyjelly.pocketcasts.repositories.playback.PlaybackManager
 import au.com.shiftyjelly.pocketcasts.repositories.refresh.RefreshPodcastsTask
 import au.com.shiftyjelly.pocketcasts.repositories.refresh.RefreshPodcastsThread
 import au.com.shiftyjelly.pocketcasts.repositories.sync.SyncManager
+import au.com.shiftyjelly.pocketcasts.servers.RefreshResponse
 import au.com.shiftyjelly.pocketcasts.servers.extensions.lastModified
 import au.com.shiftyjelly.pocketcasts.servers.extensions.wasCached
 import au.com.shiftyjelly.pocketcasts.servers.podcast.PodcastAndLastModified
@@ -199,35 +200,16 @@ class PodcastManagerImpl @Inject constructor(
         refreshPodcasts("login")
     }
 
-    override suspend fun refreshPodcasts(podcasts: List<Podcast>, playbackManager: PlaybackManager) {
-        // Find existing last modified dates
-        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${podcasts.size} podcasts to be refreshed")
-        val podcastsLastModified = podcasts.map { podcast ->
-            PodcastAndLastModified(uuid = podcast.uuid, lastModified = podcast.lastModified)
-        }
-        val uuidToPodcast = podcasts.associateBy({ it.uuid }, { it })
-        // Compare all the podcast last modified dates to the server
-        val podcastUpdates = cacheServerManager.getPodcastsUpdate(podcastsLastModified)
-        // Update only the podcasts that have changed
-        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${podcastUpdates.podcasts.size} podcasts to downloaded")
-        for (podcastUpdate in podcastUpdates.podcasts) {
-            val response = cacheServerManager.getPodcastResponseByUrl(podcastUpdate.url)
-            val podcast = uuidToPodcast[podcastUpdate.uuid] ?: continue
-            refreshPodcast(podcast, playbackManager, response)
-            updateLastModified(podcastUpdate.uuid, response.lastModified())
-        }
-    }
-
-    override suspend fun refreshPodcast(existingPodcast: Podcast, playbackManager: PlaybackManager, response: Response<PodcastResponse>) {
+    override suspend fun refreshPodcast(existingPodcast: Podcast, playbackManager: PlaybackManager, response: Response<PodcastResponse>): List<PodcastEpisode> {
         try {
             if (response.wasCached()) {
                 LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: Podcast ${existingPodcast.uuid} was cached, not refreshing")
-                return
+                return emptyList()
             }
             val updatedPodcast = response.body()?.toPodcast()
             if (updatedPodcast == null) {
                 LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: Podcast ${existingPodcast.uuid} was not found, not refreshing")
-                return
+                return emptyList()
             }
 
             val originalPodcast = existingPodcast.copy()
@@ -241,6 +223,7 @@ class PodcastManagerImpl @Inject constructor(
             val existingEpisodes = episodeManager.findEpisodesByPodcastOrderedByPublishDate(existingPodcast)
             val mostRecentEpisode = existingEpisodes.firstOrNull()
             val insertEpisodes = mutableListOf<PodcastEpisode>()
+            val newEpisodes = mutableListOf<PodcastEpisode>()
             updatedPodcast.episodes.forEach { newEpisode ->
                 val existingEpisode = existingEpisodes.find { it.uuid == newEpisode.uuid }
                 if (existingEpisode != null) {
@@ -267,9 +250,7 @@ class PodcastManagerImpl @Inject constructor(
                     }
                 } else {
                     if (existingPodcast.isSubscribed) {
-                        newEpisode.addedDate = Date()
-                        existingPodcast.addEpisode(newEpisode)
-                        insertEpisodes.add(newEpisode)
+                        newEpisodes.add(newEpisode)
                     } else if (mostRecentEpisode != null && newEpisode.publishedDate.before(mostRecentEpisode.publishedDate)) {
                         newEpisode.podcastUuid = existingPodcast.uuid
                         newEpisode.episodeStatus = EpisodeStatusEnum.NOT_DOWNLOADED
@@ -315,17 +296,39 @@ class PodcastManagerImpl @Inject constructor(
             } else {
                 LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: Podcast ${existingPodcast.uuid} refreshed. Downloaded and no updates required.")
             }
+            return newEpisodes
         } catch (e: Exception) {
             LogBuffer.e(LogBuffer.TAG_BACKGROUND_TASKS, e, "Refresh: Podcast ${existingPodcast.uuid} failed to refresh.")
             Sentry.captureException(e)
+            return emptyList()
+        }
+    }
+
+    override suspend fun refreshPodcasts(podcasts: List<Podcast>, playbackManager: PlaybackManager, refreshResponse: RefreshResponse) {
+        // Find existing last modified dates
+        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${podcasts.size} podcasts to be refreshed")
+        val podcastsLastModified = podcasts.map { podcast ->
+            PodcastAndLastModified(uuid = podcast.uuid, lastModified = podcast.lastModified)
+        }
+        val uuidToPodcast = podcasts.associateBy({ it.uuid }, { it })
+        // Compare all the podcast last modified dates to the server
+        val podcastUpdates = cacheServerManager.getPodcastsUpdate(podcastsLastModified)
+        // Update only the podcasts that have changed
+        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh: ${podcastUpdates.podcasts.size} podcasts to downloaded")
+        for (podcastUpdate in podcastUpdates.podcasts) {
+            val response = cacheServerManager.getPodcastResponseByUrl(podcastUpdate.url)
+            val podcast = uuidToPodcast[podcastUpdate.uuid] ?: continue
+            val newEpisodes = refreshPodcast(podcast, playbackManager, response)
+            refreshResponse.addUpdate(podcastUpdate.uuid, newEpisodes)
+            updateLastModified(podcastUpdate.uuid, response.lastModified())
         }
     }
 
     override fun refreshPodcastInBackground(existingPodcast: Podcast, playbackManager: PlaybackManager) {
-//        launch {
-//            val response = cacheServerManager.getPodcastResponse(existingPodcast.uuid)
-//            refreshPodcast(existingPodcast, playbackManager, response)
-//        }
+        launch {
+            val response = cacheServerManager.getPodcastResponse(existingPodcast.uuid)
+            refreshPodcast(existingPodcast, playbackManager, response)
+        }
     }
 
     override fun reloadFoldersFromServer() {

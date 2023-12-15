@@ -168,9 +168,12 @@ class RefreshPodcastsThread(
         if (FeatureFlag.isEnabled(Feature.NEW_EPISODE_REFRESH)) {
             runBlocking {
                 val startTime = SystemClock.elapsedRealtime()
-                podcastManager.refreshPodcasts(podcasts, playbackManager)
+                val refreshResponse = RefreshResponse()
+                podcastManager.refreshPodcasts(podcasts, playbackManager, refreshResponse)
                 val elapsedTime = String.format("%d ms", SystemClock.elapsedRealtime() - startTime)
-                LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh complete. ${podcasts.size} podcasts in $elapsedTime")
+                LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh complete (New). ${podcasts.size} podcasts in $elapsedTime")
+
+                processRefreshResponse(refreshResponse)
 
                 val syncRefreshState = sync()
                 if (syncRefreshState is RefreshState.Failed) {
@@ -186,7 +189,7 @@ class RefreshPodcastsThread(
                 object : ServerCallback<RefreshResponse> {
                     override fun dataReturned(result: RefreshResponse?) {
                         val elapsedTime = String.format("%d ms", SystemClock.elapsedRealtime() - startTime)
-                        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh - podcasts response - $elapsedTime")
+                        LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh complete (Old). ${podcasts.size} podcasts in $elapsedTime. ${result?.getPodcastsWithUpdates()?.size ?: 0} podcasts with updates.")
                         processRefreshResponse(result)
                     }
 
