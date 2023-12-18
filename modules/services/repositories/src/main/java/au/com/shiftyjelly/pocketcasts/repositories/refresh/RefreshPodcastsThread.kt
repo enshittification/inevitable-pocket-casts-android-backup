@@ -163,7 +163,6 @@ class RefreshPodcastsThread(
         val serverManager = entryPoint.serverManager()
         val podcasts = podcastManager.findSubscribed()
         val playbackManager = entryPoint.playbackManager()
-        val settings = entryPoint.settings()
 
         if (FeatureFlag.isEnabled(Feature.NEW_EPISODE_REFRESH)) {
             runBlocking {
@@ -174,13 +173,6 @@ class RefreshPodcastsThread(
                 LogBuffer.i(LogBuffer.TAG_BACKGROUND_TASKS, "Refresh complete (New). ${podcasts.size} podcasts in $elapsedTime")
 
                 processRefreshResponse(refreshResponse)
-
-                val syncRefreshState = sync()
-                if (syncRefreshState is RefreshState.Failed) {
-                    settings.setRefreshState(syncRefreshState)
-                } else {
-                    settings.setRefreshState(RefreshState.Success(Date(System.currentTimeMillis())))
-                }
             }
         } else {
             val startTime = SystemClock.elapsedRealtime()
