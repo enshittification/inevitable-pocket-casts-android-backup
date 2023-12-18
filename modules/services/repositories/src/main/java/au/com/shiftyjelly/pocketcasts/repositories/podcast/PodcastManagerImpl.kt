@@ -249,15 +249,17 @@ class PodcastManagerImpl @Inject constructor(
                         episodeManager.update(existingEpisode)
                     }
                 } else {
-                    if (existingPodcast.isSubscribed) {
-                        newEpisodes.add(newEpisode)
-                    } else if (mostRecentEpisode != null && newEpisode.publishedDate.before(mostRecentEpisode.publishedDate)) {
+                    if (!existingPodcast.isSubscribed || (mostRecentEpisode != null && newEpisode.publishedDate.before(mostRecentEpisode.publishedDate))) {
                         newEpisode.podcastUuid = existingPodcast.uuid
                         newEpisode.episodeStatus = EpisodeStatusEnum.NOT_DOWNLOADED
                         newEpisode.playingStatus = EpisodePlayingStatus.NOT_PLAYED
 
                         // for podcast you're subscribed to, if we find episodes older than a week, we add them in as archived so they don't flood your filters, etc
-                        val newEpisodeIs7DaysOld = DateUtil.daysBetweenTwoDates(newEpisode.publishedDate, mostRecentEpisode.publishedDate) >= 7
+                        val newEpisodeIs7DaysOld = if (mostRecentEpisode != null) {
+                            DateUtil.daysBetweenTwoDates(newEpisode.publishedDate, mostRecentEpisode.publishedDate) >= 7
+                        } else {
+                            true
+                        }
                         newEpisode.isArchived = existingPodcast.isSubscribed && newEpisodeIs7DaysOld
 
                         newEpisode.archivedModified = Date().time
@@ -266,6 +268,8 @@ class PodcastManagerImpl @Inject constructor(
                         newEpisode.addedDate = existingPodcast.addedDate ?: Date()
                         existingPodcast.addEpisode(newEpisode)
                         insertEpisodes.add(newEpisode)
+                    } else {
+                        newEpisodes.add(newEpisode)
                     }
                 }
             }
