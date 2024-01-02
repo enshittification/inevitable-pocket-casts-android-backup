@@ -7,7 +7,17 @@ import com.squareup.moshi.JsonWriter
 enum class EpisodePlayingStatus {
     NOT_PLAYED,
     IN_PROGRESS,
-    COMPLETED
+    COMPLETED;
+
+    companion object {
+        fun fromInt(n: Int) =
+            when (n) {
+                1 -> NOT_PLAYED
+                2 -> IN_PROGRESS
+                3 -> COMPLETED
+                else -> NOT_PLAYED
+            }
+    }
 }
 
 class EpisodePlayingStatusMoshiAdapter : JsonAdapter<EpisodePlayingStatus>() {
@@ -15,11 +25,6 @@ class EpisodePlayingStatusMoshiAdapter : JsonAdapter<EpisodePlayingStatus>() {
 
     override fun fromJson(reader: JsonReader): EpisodePlayingStatus? {
         val value = reader.nextInt()
-        return when (value) {
-            1 -> EpisodePlayingStatus.NOT_PLAYED
-            2 -> EpisodePlayingStatus.IN_PROGRESS
-            3 -> EpisodePlayingStatus.COMPLETED
-            else -> EpisodePlayingStatus.NOT_PLAYED
-        }
+        return EpisodePlayingStatus.fromInt(value)
     }
 }

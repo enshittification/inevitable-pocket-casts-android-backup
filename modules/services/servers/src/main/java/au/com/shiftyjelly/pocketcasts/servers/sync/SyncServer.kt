@@ -15,6 +15,7 @@ import au.com.shiftyjelly.pocketcasts.servers.sync.register.RegisterRequest
 import au.com.shiftyjelly.pocketcasts.servers.sync.update.SyncUpdateResponse
 import com.pocketcasts.service.api.BookmarkRequest
 import com.pocketcasts.service.api.BookmarksResponse
+import com.pocketcasts.service.api.SyncUpdateRequest
 import io.reactivex.Completable
 import io.reactivex.Single
 import okhttp3.RequestBody
@@ -71,7 +72,15 @@ interface SyncServer {
 
     @FormUrlEncoded
     @POST("/sync/update")
+    @Deprecated("This should no longer be used once the SETTINGS_SYNC feature flag is removed/permanently-enabled.")
     fun syncUpdate(@FieldMap fields: Map<String, String>): Single<SyncUpdateResponse>
+
+    @Headers("Content-Type: application/octet-stream")
+    @POST("user/sync/update")
+    suspend fun userSyncUpdate(
+        @Header("Authorization") authorization: String,
+        @Body request: SyncUpdateRequest,
+    ): com.pocketcasts.service.api.SyncUpdateResponse
 
     @POST("/up_next/sync")
     fun upNextSync(@Header("Authorization") authorization: String, @Body request: UpNextSyncRequest): Single<UpNextSyncResponse>

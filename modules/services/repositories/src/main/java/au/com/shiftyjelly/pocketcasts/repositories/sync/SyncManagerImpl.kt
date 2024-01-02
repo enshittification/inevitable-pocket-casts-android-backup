@@ -46,6 +46,7 @@ import au.com.shiftyjelly.pocketcasts.servers.sync.parseErrorResponse
 import au.com.shiftyjelly.pocketcasts.servers.sync.update.SyncUpdateResponse
 import au.com.shiftyjelly.pocketcasts.utils.log.LogBuffer
 import com.jakewharton.rxrelay2.BehaviorRelay
+import com.pocketcasts.service.api.SyncUpdateRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.Completable
 import io.reactivex.Maybe
@@ -346,12 +347,19 @@ class SyncManagerImpl @Inject constructor(
 
 // Sync
 
+    @Deprecated("This should no longer be used once the SETTINGS_SYNC feature flag is removed/permanently-enabled.")
     override fun syncUpdate(data: String, lastModified: String): Single<SyncUpdateResponse> =
         getEmail()?.let { email ->
             getCacheTokenOrLoginRxSingle { token ->
+                @Suppress("DEPRECATION")
                 syncServerManager.syncUpdate(email, data, lastModified, token)
             }
         } ?: Single.error(Exception("Not logged in"))
+
+    override suspend fun userSyncUpdate(request: SyncUpdateRequest): com.pocketcasts.service.api.SyncUpdateResponse =
+        getCacheTokenOrLogin { token ->
+            syncServerManager.userSyncUpdate(token, request)
+        }
 
     override fun getLastSyncAt(): Single<String> =
         getCacheTokenOrLoginRxSingle { token ->
@@ -396,6 +404,7 @@ class SyncManagerImpl @Inject constructor(
             syncServerManager.loadStats(token)
         }
 
+    @Deprecated("This call should be removed along with NamedSettingsRequest/Response when we remove the Feature.SETTINGS_SYNC feature flag")
     override suspend fun namedSettings(request: NamedSettingsRequest): NamedSettingsResponse =
         getCacheTokenOrLogin { token ->
             syncServerManager.namedSettings(request, token)

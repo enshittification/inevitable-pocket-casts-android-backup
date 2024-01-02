@@ -21,6 +21,7 @@ class SyncSettingsTask(val context: Context, val parameters: WorkerParameters) :
                 if (FeatureFlag.isEnabled(Feature.SETTINGS_SYNC)) {
                     syncSettings(settings, namedSettingsCall)
                 } else {
+                    @Suppress("DEPRECATION")
                     oldSyncSettings(settings, namedSettingsCall)
                 }
             } catch (e: Exception) {
@@ -90,7 +91,7 @@ class SyncSettingsTask(val context: Context, val parameters: WorkerParameters) :
             }
         }
 
-        // This should be removed when we remove the Feature.SETTINGS_SYNC feature flag
+        @Deprecated("This should be removed when we remove the Feature.SETTINGS_SYNC feature flag")
         private suspend fun oldSyncSettings(
             settings: Settings,
             namedSettingsCall: NamedSettingsCaller,
