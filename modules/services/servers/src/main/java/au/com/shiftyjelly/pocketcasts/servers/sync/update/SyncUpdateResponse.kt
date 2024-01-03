@@ -11,6 +11,7 @@ import com.pocketcasts.service.api.autoSkipLastOrNull
 import com.pocketcasts.service.api.autoStartFromOrNull
 import com.pocketcasts.service.api.dateAddedOrNull
 import com.pocketcasts.service.api.durationOrNull
+import com.pocketcasts.service.api.episodeOrNull
 import com.pocketcasts.service.api.episodesSortOrderOrNull
 import com.pocketcasts.service.api.folderUuidOrNull
 import com.pocketcasts.service.api.isDeletedOrNull
@@ -87,17 +88,20 @@ data class SyncUpdateResponse(
             source: com.pocketcasts.service.api.SyncUpdateResponse
         ): SyncUpdateResponse {
 
-            val podcasts = source.recordsList
-                .mapNotNull { it.podcastOrNull }
-                .map { PodcastSync.fromSyncUserPodcast(it) }
-
             return SyncUpdateResponse(
                 lastModified = run {
                     val epochMilli = source.lastModified
                     val instant = Instant.ofEpochMilli(epochMilli)
                     DateTimeFormatter.ISO_INSTANT.format(instant)
                 },
-                podcasts = podcasts.toMutableList(),
+                podcasts = source.recordsList
+                    .mapNotNull { it.podcastOrNull }
+                    .map { PodcastSync.fromSyncUserPodcast(it) }
+                    .toMutableList(),
+                episodes = source.recordsList
+                    .mapNotNull { it.episodeOrNull }
+                    .map { EpisodeSync.fromSyncUserEpisodeSync(it) }
+                    .toMutableList(),
             )
         }
     }

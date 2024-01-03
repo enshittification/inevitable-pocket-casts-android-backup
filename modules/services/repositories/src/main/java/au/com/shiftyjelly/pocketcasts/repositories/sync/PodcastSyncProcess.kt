@@ -38,6 +38,7 @@ import au.com.shiftyjelly.pocketcasts.utils.featureflag.FeatureFlagWrapper
 import au.com.shiftyjelly.pocketcasts.utils.log.LogBuffer
 import com.google.protobuf.boolValue
 import com.google.protobuf.int32Value
+import com.google.protobuf.int64Value
 import com.google.protobuf.stringValue
 import com.google.protobuf.timestamp
 import com.pocketcasts.service.api.Record
@@ -46,6 +47,7 @@ import com.pocketcasts.service.api.int32Setting
 import com.pocketcasts.service.api.podcastSettings
 import com.pocketcasts.service.api.record
 import com.pocketcasts.service.api.syncUpdateRequest
+import com.pocketcasts.service.api.syncUserEpisode
 import com.pocketcasts.service.api.syncUserPodcast
 import io.reactivex.Completable
 import io.reactivex.Maybe
@@ -137,13 +139,12 @@ class PodcastSyncProcess(
     private fun performIncrementalSync(lastModified: String): Completable =
         if (featureFlagWrapper.isEnabled(Feature.SETTINGS_SYNC)) {
             rxCompletable {
-                val syncUpdateRequest = getSyncUpdateRequest(lastModified)
+
+                val episodesToSync = episodeManager.findEpisodesToSync()
+                val syncUpdateRequest = getSyncUpdateRequest(lastModified, episodesToSync)
                 val protobufResponse = syncManager.userSyncUpdate(syncUpdateRequest)
                 val syncUpdateResponse = SyncUpdateResponse.fromProtobufSyncUpdateResponse(protobufResponse)
-                processServerResponse(
-                    syncUpdateResponse,
-                    emptyList(), // FIXME
-                ).await()
+                processServerResponse(syncUpdateResponse, episodesToSync).await()
             }
         } else {
 
@@ -159,7 +160,7 @@ class PodcastSyncProcess(
             downloadObservable
         }
 
-    private fun getSyncUpdateRequest(lastModifiedString: String): SyncUpdateRequest =
+    private fun getSyncUpdateRequest(lastModifiedString: String, episodesToSync: List<PodcastEpisode>): SyncUpdateRequest =
         try {
             syncUpdateRequest {
 
@@ -176,6 +177,9 @@ class PodcastSyncProcess(
                 val podcasts = podcastManager.findPodcastsToSync()
                 val podcastRecords = podcasts.map { toRecord(it) }
                 records.addAll(podcastRecords)
+
+                val episodeRecords = episodesToSync.map { toRecord(it) }
+                records.addAll(episodeRecords)
             }
         } catch (e: Exception) {
             Timber.e(e, "Unable to upload podcast to sync.")
@@ -964,5 +968,42 @@ private fun toRecord(podcast: Podcast): Record =
             }
 
             sortPosition = int32Value { value = podcast.sortPosition }
+        }
+    }
+
+private fun toRecord(episode: PodcastEpisode): Record =
+    record {
+        this.episode = syncUserEpisode {
+
+            uuid = episode.uuid
+            podcastUuid = episode.podcastUuid
+
+            episode.playingStatusModified?.let { episodePlayingStatusModified ->
+                playingStatus = int32Value { value = episode.playingStatus.toInt() }
+                playingStatusModified = int64Value { value = episodePlayingStatusModified }
+            }
+
+            episode.starredModified?.let { episodeStarredModified ->
+                starred = boolValue { value = episode.isStarred }
+                starredModified = int64Value { value = episodeStarredModified }
+            }
+
+            episode.playedUpToModified?.let { episodePlayedUpToModified ->
+                playedUpTo = int64Value { value = episode.playedUpTo.toLong() }
+                playedUpToModified = int64Value { value = episodePlayedUpToModified }
+            }
+
+            episode.durationModified?.let { episodeDurationModified ->
+                val episodeDuration = episode.duration
+                if (episodeDuration != 0.0) {
+                    duration = int64Value { value = episodeDuration.toLong() }
+                    durationModified = int64Value { value = episodeDurationModified }
+                }
+            }
+
+            episode.archivedModified?.let { episodeArchivedModified ->
+                isDeleted = boolValue { value = episode.isArchived }
+                isDeletedModified = int64Value { value = episodeArchivedModified }
+            }
         }
     }

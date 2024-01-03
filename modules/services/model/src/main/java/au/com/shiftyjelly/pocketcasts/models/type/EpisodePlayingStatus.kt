@@ -9,6 +9,12 @@ enum class EpisodePlayingStatus {
     IN_PROGRESS,
     COMPLETED;
 
+    fun toInt(): Int = when (this) {
+        NOT_PLAYED -> 1
+        IN_PROGRESS -> 2
+        COMPLETED -> 3
+    }
+
     companion object {
         fun fromInt(n: Int) =
             when (n) {
