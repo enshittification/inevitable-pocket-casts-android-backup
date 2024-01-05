@@ -5,14 +5,17 @@ import au.com.shiftyjelly.pocketcasts.models.entity.Folder
 import au.com.shiftyjelly.pocketcasts.models.entity.Playlist
 import au.com.shiftyjelly.pocketcasts.models.type.EpisodePlayingStatus
 import au.com.shiftyjelly.pocketcasts.models.type.PodcastsSortType
+import au.com.shiftyjelly.pocketcasts.models.type.SyncStatus
 import au.com.shiftyjelly.pocketcasts.servers.extensions.toDate
 import au.com.shiftyjelly.pocketcasts.utils.log.LogBuffer
+import com.pocketcasts.service.api.SyncUserBookmark
 import com.pocketcasts.service.api.SyncUserEpisode
 import com.pocketcasts.service.api.SyncUserFolder
 import com.pocketcasts.service.api.SyncUserPlaylist
 import com.pocketcasts.service.api.SyncUserPodcast
 import com.pocketcasts.service.api.autoSkipLastOrNull
 import com.pocketcasts.service.api.autoStartFromOrNull
+import com.pocketcasts.service.api.bookmarkOrNull
 import com.pocketcasts.service.api.dateAddedOrNull
 import com.pocketcasts.service.api.durationOrNull
 import com.pocketcasts.service.api.episodeOrNull
@@ -92,32 +95,33 @@ data class SyncUpdateResponse(
     companion object {
         fun fromProtobufSyncUpdateResponse(
             source: com.pocketcasts.service.api.SyncUpdateResponse
-        ): SyncUpdateResponse {
-
-            return SyncUpdateResponse(
-                lastModified = run {
-                    val epochMilli = source.lastModified
-                    val instant = Instant.ofEpochMilli(epochMilli)
-                    DateTimeFormatter.ISO_INSTANT.format(instant)
-                },
-                podcasts = source.recordsList
-                    .mapNotNull { it.podcastOrNull }
-                    .map { PodcastSync.fromSyncUserPodcast(it) }
-                    .toMutableList(),
-                episodes = source.recordsList
-                    .mapNotNull { it.episodeOrNull }
-                    .map { EpisodeSync.fromSyncUserEpisodeSync(it) }
-                    .toMutableList(),
-                folders = source.recordsList
-                    .mapNotNull { it.folderOrNull }
-                    .mapNotNull { syncUserFolderToFolder(it) }
-                    .toMutableList(),
-                playlists = source.recordsList
-                    .mapNotNull { it.playlistOrNull }
-                    .map { syncUserPlaylistToPlaylist(it) }
-                    .toMutableList()
-            )
-        }
+        ) = SyncUpdateResponse(
+            lastModified = run {
+                val epochMilli = source.lastModified
+                val instant = Instant.ofEpochMilli(epochMilli)
+                DateTimeFormatter.ISO_INSTANT.format(instant)
+            },
+            podcasts = source.recordsList
+                .mapNotNull { it.podcastOrNull }
+                .map { PodcastSync.fromSyncUserPodcast(it) }
+                .toMutableList(),
+            episodes = source.recordsList
+                .mapNotNull { it.episodeOrNull }
+                .map { EpisodeSync.fromSyncUserEpisodeSync(it) }
+                .toMutableList(),
+            folders = source.recordsList
+                .mapNotNull { it.folderOrNull }
+                .mapNotNull { syncUserFolderToFolder(it) }
+                .toMutableList(),
+            playlists = source.recordsList
+                .mapNotNull { it.playlistOrNull }
+                .map { syncUserPlaylistToPlaylist(it) }
+                .toMutableList(),
+            bookmarks = source.recordsList
+                .mapNotNull { it.bookmarkOrNull }
+                .map { syncUserBookmarkToBookmark(it) }
+                .toMutableList(),
+        )
     }
 }
 
@@ -162,4 +166,22 @@ private fun syncUserPlaylistToPlaylist(syncUserPlaylist: SyncUserPlaylist): Play
         filterDuration = syncUserPlaylist.filterDuration.value,
         longerThan = syncUserPlaylist.longerThan.value,
         shorterThan = syncUserPlaylist.shorterThan.value,
+    )
+
+private fun syncUserBookmarkToBookmark(syncUserBookmark: SyncUserBookmark): Bookmark =
+    Bookmark(
+        uuid = syncUserBookmark.bookmarkUuid,
+        episodeUuid = syncUserBookmark.episodeUuid,
+        podcastUuid = syncUserBookmark.podcastUuid,
+        timeSecs = syncUserBookmark.time.value,
+        createdAt = syncUserBookmark.createdAt.toDate() ?: run {
+            LogBuffer.e(LogBuffer.TAG_BACKGROUND_TASKS, "Unable to parse createdAt from SyncUserBookmark: createdAt: ${syncUserBookmark.createdAt}, bookmarkUuid: ${syncUserBookmark.bookmarkUuid}")
+            Date()
+        },
+        title = syncUserBookmark.title.value,
+        titleModified = syncUserBookmark.titleModified.value,
+        deleted = syncUserBookmark.isDeleted.value,
+        deletedModified = syncUserBookmark.isDeletedModified.value,
+        syncStatus = SyncStatus.SYNCED,
+
     )
