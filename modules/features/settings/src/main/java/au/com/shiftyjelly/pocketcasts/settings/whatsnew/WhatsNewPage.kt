@@ -64,6 +64,7 @@ fun WhatsNewPage(
                 header = {
                     when (uiState.feature) {
                         is WhatsNewFeature.Bookmarks -> BookmarksHeader(onClose)
+                        is WhatsNewFeature.SlumberStudiosPromo -> SlumberStudiosHeader()
                     }
                 },
                 onConfirm = { viewModel.onConfirm() },
@@ -122,16 +123,18 @@ private fun WhatsNewPageLoaded(
                 modifier = Modifier
                     .padding(all = 16.dp),
             ) {
-                SubscriptionBadgeForTier(
-                    tier = Subscription.SubscriptionTier.fromUserTier(state.tier),
-                    displayMode = SubscriptionBadgeDisplayMode.ColoredWithWhiteForeground,
-                )
+                if (state.feature is WhatsNewFeature.Bookmarks) {
+                    SubscriptionBadgeForTier(
+                        tier = Subscription.SubscriptionTier.fromUserTier(state.tier),
+                        displayMode = SubscriptionBadgeDisplayMode.ColoredWithWhiteForeground,
+                    )
 
-                Spacer(
-                    modifier = Modifier.height(
-                        if (state.tier == UserTier.Free) 0.dp else 16.dp,
-                    ),
-                )
+                    Spacer(
+                        modifier = Modifier.height(
+                            if (state.tier == UserTier.Free) 0.dp else 16.dp,
+                        ),
+                    )
+                }
 
                 TextH20(
                     text = stringResource(id = state.feature.title),
@@ -197,6 +200,7 @@ private fun getButtonTitle(
             }
         }
     }
+    is WhatsNewFeature.SlumberStudiosPromo -> stringResource(state.feature.confirmButtonTitle)
 }
 
 @Composable
