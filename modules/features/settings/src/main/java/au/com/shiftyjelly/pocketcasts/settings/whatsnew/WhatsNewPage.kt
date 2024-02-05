@@ -24,16 +24,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import au.com.shiftyjelly.pocketcasts.compose.AppThemeWithBackground
 import au.com.shiftyjelly.pocketcasts.compose.buttons.RowButton
 import au.com.shiftyjelly.pocketcasts.compose.buttons.RowTextButton
+import au.com.shiftyjelly.pocketcasts.compose.components.Clickable
+import au.com.shiftyjelly.pocketcasts.compose.components.ClickableTextHelper
 import au.com.shiftyjelly.pocketcasts.compose.components.TextH20
 import au.com.shiftyjelly.pocketcasts.compose.components.TextP40
 import au.com.shiftyjelly.pocketcasts.compose.images.SubscriptionBadgeDisplayMode
@@ -41,6 +45,7 @@ import au.com.shiftyjelly.pocketcasts.compose.images.SubscriptionBadgeForTier
 import au.com.shiftyjelly.pocketcasts.compose.preview.ThemePreviewParameterProvider
 import au.com.shiftyjelly.pocketcasts.compose.theme
 import au.com.shiftyjelly.pocketcasts.models.type.Subscription
+import au.com.shiftyjelly.pocketcasts.preferences.Settings
 import au.com.shiftyjelly.pocketcasts.settings.whatsnew.WhatsNewViewModel.UiState
 import au.com.shiftyjelly.pocketcasts.settings.whatsnew.WhatsNewViewModel.WhatsNewFeature
 import au.com.shiftyjelly.pocketcasts.ui.theme.Theme
@@ -144,11 +149,7 @@ private fun WhatsNewPageLoaded(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextP40(
-                    text = getMessage(state),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.theme.colors.primaryText02,
-                )
+                Message(state)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -176,11 +177,15 @@ private fun WhatsNewPageLoaded(
 }
 
 @Composable
-private fun getMessage(
+private fun Message(
     state: UiState.Loaded,
-): String = when (state.feature) {
-    is WhatsNewFeature.Bookmarks -> stringResource(state.feature.message)
-    is WhatsNewFeature.SlumberStudiosPromo -> stringResource(state.feature.message,state.feature.promoCode)
+) = when (state.feature) {
+    is WhatsNewFeature.Bookmarks -> TextP40(
+        text = stringResource(state.feature.message),
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.theme.colors.primaryText02,
+    )
+    is WhatsNewFeature.SlumberStudiosPromo -> SlumberStudiosPromoMessage(color = MaterialTheme.theme.colors.primaryText02, slumberStudiosPromo = state.feature)
 }
 
 @Composable
@@ -209,6 +214,36 @@ private fun getButtonTitle(
         }
     }
     is WhatsNewFeature.SlumberStudiosPromo -> stringResource(state.feature.confirmButtonTitle)
+}
+
+@Composable
+fun SlumberStudiosPromoMessage(
+    color: Color,
+    slumberStudiosPromo: WhatsNewFeature.SlumberStudiosPromo,
+    modifier: Modifier = Modifier,
+) {
+    val learnMoreText = stringResource(LR.string.whats_new_slumber_studios_body_learn_more)
+    val text = stringResource(
+        slumberStudiosPromo.message,
+        slumberStudiosPromo.promoCode,
+        learnMoreText,
+    )
+    val uriHandler = LocalUriHandler.current
+    ClickableTextHelper(
+        text = text,
+        color = color,
+        lineHeight = 16.sp,
+        textAlign = TextAlign.Start,
+        clickables = listOf(
+            Clickable(
+                text = learnMoreText,
+                onClick = {
+                    uriHandler.openUri(Settings.SLUMBER_STUDIOS_REDEEM_LEARN_MORE_TEXT)
+                },
+            ),
+        ),
+        modifier = modifier,
+    )
 }
 
 @Composable
