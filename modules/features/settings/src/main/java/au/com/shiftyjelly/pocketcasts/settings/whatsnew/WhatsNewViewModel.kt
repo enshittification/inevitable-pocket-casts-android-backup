@@ -38,7 +38,7 @@ class WhatsNewViewModel @Inject constructor(
     init {
         if (FeatureFlag.isEnabled(Feature.SLUMBER_STUDIOS_PROMO)) {
             _state.value = UiState.Loaded(
-                feature = WhatsNewFeature.SlumberStudiosPromo,
+                feature = WhatsNewFeature.SlumberStudiosPromo(settings.getSlumberStudiosPromoCode()),
                 tier = settings.userTier,
             )
         } else {
@@ -137,7 +137,7 @@ class WhatsNewViewModel @Inject constructor(
             confirmButtonTitle = confirmButtonTitle,
         )
 
-        data object SlumberStudiosPromo : WhatsNewFeature(
+        data class SlumberStudiosPromo(val promoCode: String) : WhatsNewFeature(
             title = LR.string.whats_new_slumber_studios_title,
             message = LR.string.whats_new_slumber_studios_body,
             confirmButtonTitle = LR.string.whats_new_slumber_studios_redeem_now_button,

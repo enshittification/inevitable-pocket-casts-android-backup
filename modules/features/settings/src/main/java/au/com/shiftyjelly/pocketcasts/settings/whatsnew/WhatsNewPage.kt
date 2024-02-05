@@ -145,7 +145,7 @@ private fun WhatsNewPageLoaded(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TextP40(
-                    text = stringResource(state.feature.message),
+                    text = getMessage(state),
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.theme.colors.primaryText02,
                 )
@@ -173,6 +173,14 @@ private fun WhatsNewPageLoaded(
             }
         }
     }
+}
+
+@Composable
+private fun getMessage(
+    state: UiState.Loaded,
+): String = when (state.feature) {
+    is WhatsNewFeature.Bookmarks -> stringResource(state.feature.message)
+    is WhatsNewFeature.SlumberStudiosPromo -> stringResource(state.feature.message,state.feature.promoCode)
 }
 
 @Composable

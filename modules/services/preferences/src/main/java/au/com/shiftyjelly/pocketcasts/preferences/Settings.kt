@@ -353,6 +353,7 @@ interface Settings {
     fun getPodcastSearchDebounceMs(): Long
     fun getEpisodeSearchDebounceMs(): Long
     fun getReportViolationUrl(): String
+    fun getSlumberStudiosPromoCode(): String
     val podcastGroupingDefault: UserSetting<PodcastGrouping>
 
     val marketingOptIn: UserSetting<Boolean>
